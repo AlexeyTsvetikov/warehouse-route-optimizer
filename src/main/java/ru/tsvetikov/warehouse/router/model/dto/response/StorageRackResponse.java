@@ -1,4 +1,10 @@
 package ru.tsvetikov.warehouse.router.model.dto.response;
 
-public record StorageRackResponse() {
-}
+import ru.tsvetikov.warehouse.router.model.enums.RackType;
+
+public record StorageRackResponse(
+        Long id,
+        String zone,
+        RackType rackType,
+        String description
+) {}

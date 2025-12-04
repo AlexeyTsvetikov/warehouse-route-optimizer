@@ -24,25 +24,19 @@ public class ProductService {
 
     @Transactional
     public ProductResponse create(ProductRequest request) {
-        log.info("Creating product with tracking number: {}", request.trackingNumber());
-
         if (productRepository.findByTrackingNumber(request.trackingNumber()).isPresent()) {
             throw new CommonBackendException(
                     "Product with tracking number already exists: " + request.trackingNumber(), HttpStatus.CONFLICT);
         }
 
         Product product = productMapper.toEntity(request);
-
         Product saved = productRepository.save(product);
-        log.info("Product created with id: {}", saved.getId());
 
         return productMapper.toResponseDto(saved);
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getById(Long id) {
-        log.info("Fetching product with id: {}", id);
-
         Product product = productRepository.findById(id).
                 orElseThrow(() -> new CommonBackendException("Product not found with id: " + id, HttpStatus.NOT_FOUND));
 
@@ -58,20 +52,15 @@ public class ProductService {
 
     @Transactional
     public void delete(Long id) {
-        log.info("Deleting product with id: {}", id);
-
         if (!productRepository.existsById(id)) {
             throw new CommonBackendException("Product not found with id: " + id, HttpStatus.NOT_FOUND);
         }
 
         productRepository.deleteById(id);
-        log.info("Product deleted with id: {}", id);
     }
 
     @Transactional
     public ProductResponse update(Long id, ProductRequest request) {
-        log.info("Updating product with id: {}", id);
-
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new CommonBackendException("Product not found with id: " + id,
                         HttpStatus.NOT_FOUND));
@@ -83,21 +72,9 @@ public class ProductService {
             }
         }
 
-        updateProductFields(existing, request);
-
+        productMapper.updateEntityFromDto(request, existing);
         Product updated = productRepository.save(existing);
-        log.info("Product updated with id: {}", id);
 
         return productMapper.toResponseDto(updated);
-    }
-
-    private void updateProductFields(Product product, ProductRequest request) {
-        if (request.trackingNumber() != null) product.setTrackingNumber(request.trackingNumber());
-        if (request.destinationRegion() != null) product.setDestinationRegion(request.destinationRegion());
-        if (request.width() != null) product.setWidth(request.width());
-        if (request.height() != null) product.setHeight(request.height());
-        if (request.depth() != null) product.setDepth(request.depth());
-        if (request.weight() != null) product.setWeight(request.weight());
-        if (request.priority() != null) product.setPriority(request.priority());
     }
 }

@@ -1,4 +1,13 @@
 package ru.tsvetikov.warehouse.router.model.dto.response;
 
-public record OrderResponse() {
-}
+import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
+import java.time.LocalDateTime;
+
+public record OrderResponse(
+        Long id,
+        String orderNumber,
+        String destinationRegion,
+        OrderStatus status,
+        LocalDateTime createdAt,
+        LocalDateTime plannedDeparture
+) {}

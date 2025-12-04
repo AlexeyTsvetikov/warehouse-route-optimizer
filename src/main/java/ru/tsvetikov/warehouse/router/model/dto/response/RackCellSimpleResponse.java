@@ -2,14 +2,11 @@ package ru.tsvetikov.warehouse.router.model.dto.response;
 
 import ru.tsvetikov.warehouse.router.model.enums.CellType;
 
-public record RackCellResponse(
+public record RackCellSimpleResponse(
         Long id,
-        Long storageRackId,
         String cellCode,
         CellType cellType,
         Double coordX,
         Double coordY,
-        Double maxVolume,
-        Double currentVolume,
         boolean occupied
 ) {}

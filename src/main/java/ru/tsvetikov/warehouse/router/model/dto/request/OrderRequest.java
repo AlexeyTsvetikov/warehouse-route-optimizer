@@ -1,4 +1,9 @@
 package ru.tsvetikov.warehouse.router.model.dto.request;
 
-public record OrderRequest() {
-}
+import java.time.LocalDateTime;
+
+public record OrderRequest(
+        String orderNumber,
+        String destinationRegion,
+        LocalDateTime plannedDeparture
+) {}
