@@ -1,4 +1,11 @@
 package ru.tsvetikov.warehouse.router.model.dto.request;
 
-public record UserRequest() {
-}
+import ru.tsvetikov.warehouse.router.model.enums.Role;
+
+public record UserRequest(
+        String username,
+        String password,
+        Role role,
+        Double lastKnownX,
+        Double lastKnownY
+) {}
