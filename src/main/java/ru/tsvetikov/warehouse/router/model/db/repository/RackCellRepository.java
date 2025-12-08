@@ -6,6 +6,7 @@ import ru.tsvetikov.warehouse.router.model.db.entity.RackCell;
 
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Repository
@@ -16,4 +17,6 @@ public interface RackCellRepository extends JpaRepository<RackCell, Long> {
     List<RackCell> findByStorageRackId(Long rackId);
 
     List<RackCell> findByOccupiedFalse();
+
+    Optional<RackCell> findByCellCode(String s);
 }
