@@ -1,5 +1,6 @@
 package ru.tsvetikov.warehouse.router.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ public class RackCellController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public RackCellResponse create(@RequestBody RackCellRequest request) {
+    public RackCellResponse create(@Valid @RequestBody RackCellRequest request) {
         return rackCellService.create(request);
     }
 
@@ -43,7 +44,7 @@ public class RackCellController {
     }
 
     @PutMapping("/{id}")
-    public RackCellResponse update(@PathVariable Long id, @RequestBody RackCellRequest request) {
+    public RackCellResponse update(@PathVariable Long id, @Valid @RequestBody RackCellRequest request) {
         return rackCellService.update(id, request);
     }
 

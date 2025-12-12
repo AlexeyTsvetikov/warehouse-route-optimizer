@@ -1,5 +1,6 @@
 package ru.tsvetikov.warehouse.router.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse create(@RequestBody UserRequest request) {
+    public UserResponse create(@Valid @RequestBody UserRequest request) {
         return userService.create(request);
     }
 
@@ -37,7 +38,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public UserResponse update(@PathVariable Long id, @RequestBody UserRequest request) {
+    public UserResponse update(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
         return userService.update(id, request);
     }
 

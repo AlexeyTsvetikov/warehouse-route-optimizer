@@ -1,5 +1,6 @@
 package ru.tsvetikov.warehouse.router.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class StorageRackController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public StorageRackResponse create(@RequestBody StorageRackRequest request) {
+    public StorageRackResponse create(@Valid @RequestBody StorageRackRequest request) {
         return storageRackService.create(request);
     }
 
@@ -37,7 +38,7 @@ public class StorageRackController {
     }
 
     @PutMapping("/{id}")
-    public StorageRackResponse update(@PathVariable Long id, @RequestBody StorageRackRequest request) {
+    public StorageRackResponse update(@PathVariable Long id, @Valid @RequestBody StorageRackRequest request) {
         return storageRackService.update(id, request);
     }
 

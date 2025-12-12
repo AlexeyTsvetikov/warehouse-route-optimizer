@@ -1,5 +1,6 @@
 package ru.tsvetikov.warehouse.router.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class OrderDetailController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public OrderDetailResponse create(OrderDetailRequest request) {
+    public OrderDetailResponse create(@Valid @RequestBody OrderDetailRequest request) {
         return orderDetailService.create(request);
     }
 
@@ -37,7 +38,8 @@ public class OrderDetailController {
     }
 
     @PutMapping("/{id}")
-    public OrderDetailResponse update(@PathVariable Long id, @RequestBody OrderDetailRequest orderDetailRequest) {
+    public OrderDetailResponse update(@PathVariable Long id,
+                                      @Valid @RequestBody OrderDetailRequest orderDetailRequest) {
         return orderDetailService.update(id, orderDetailRequest);
     }
 

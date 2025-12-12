@@ -1,5 +1,6 @@
 package ru.tsvetikov.warehouse.router.controllers;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TaskResponse create(@RequestBody TaskRequest request) {
+    public TaskResponse create(@Valid @RequestBody TaskRequest request) {
         return taskService.create(request);
     }
 
@@ -47,7 +48,7 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public TaskResponse update(@PathVariable Long id, @RequestBody TaskRequest request) {
+    public TaskResponse update(@PathVariable Long id, @Valid @RequestBody TaskRequest request) {
         return taskService.update(id, request);
     }
 
