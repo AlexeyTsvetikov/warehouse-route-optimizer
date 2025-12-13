@@ -1,31 +1,41 @@
 package ru.tsvetikov.warehouse.router.model.db.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
-import ru.tsvetikov.warehouse.router.model.enums.Priority;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
-import java.util.LinkedHashSet;
-import java.util.Set;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "products")
 public class Product {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(name = "tracking_number", nullable = false, unique = true, length = 50)
-    private String trackingNumber;
+    @Column(name = "sku", length = 100, unique = true, nullable = false)
+    private String sku;
 
-    @Column(name = "destination_region", nullable = false, length = 100)
-    private String destinationRegion;
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "description", length = 1000)
+    private String description;
+
+    @Column(name = "weight")
+    private Double weight;
 
     @Column(name = "width")
     private Double width;
@@ -39,21 +49,25 @@ public class Product {
     @Column(name = "volume", insertable = false, updatable = false)
     private Double volume;
 
-    @Column(name = "weight")
-    private Double weight;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "priority", nullable = false, length = 10)
-    private Priority priority = Priority.NORMAL;
-
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @ColumnDefault("true")
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    @JsonBackReference(value = "category-product")
+    private Category category;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
-    private Set<OrderDetail> orderDetails = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
-    private Set<Task> tasks = new LinkedHashSet<>();
+    @JsonManagedReference(value = "product-stock")
+    private List<Stock> stocks = new ArrayList<>();
 
 }

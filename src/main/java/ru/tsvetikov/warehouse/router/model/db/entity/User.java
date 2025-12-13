@@ -3,10 +3,12 @@ package ru.tsvetikov.warehouse.router.model.db.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import ru.tsvetikov.warehouse.router.model.enums.Role;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -27,6 +29,12 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "first_name", length = 100)
+    private String firstName;
+
+    @Column(name = "last_name", length = 100)
+    private String lastName;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private Role role = Role.PICKER;
@@ -37,14 +45,19 @@ public class User {
     @Column(name = "last_known_y")
     private Double lastKnownY;
 
+    @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
-    private boolean active = true;
+    private Boolean isActive;
 
     @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private Set<Task> tasks = new LinkedHashSet<>();
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private Instant updatedAt;
+
+    @OneToMany(mappedBy = "assignedUser", fetch = FetchType.LAZY)
+    private Set<WarehouseTask> warehouseTasks = new LinkedHashSet<>();
 
 }

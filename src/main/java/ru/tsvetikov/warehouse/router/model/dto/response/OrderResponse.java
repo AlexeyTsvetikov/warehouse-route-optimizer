@@ -4,10 +4,5 @@ import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
 import java.time.LocalDateTime;
 
 public record OrderResponse(
-        Long id,
-        String orderNumber,
-        String destinationRegion,
-        OrderStatus status,
-        LocalDateTime createdAt,
-        LocalDateTime plannedDeparture
+
 ) {}

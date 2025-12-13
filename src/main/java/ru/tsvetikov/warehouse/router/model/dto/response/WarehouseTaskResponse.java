@@ -1,7 +1,5 @@
 package ru.tsvetikov.warehouse.router.model.dto.response;
 
-import java.time.LocalDateTime;
-
-public record ProductResponse(
+public record WarehouseTaskResponse(
 
 ) {}

@@ -5,12 +5,5 @@ import jakarta.validation.constraints.NotNull;
 import ru.tsvetikov.warehouse.router.model.enums.Role;
 
 public record UserRequest(
-        @NotBlank
-        String username,
-        @NotBlank
-        String password,
-        @NotNull
-        Role role,
-        Double lastKnownX,
-        Double lastKnownY
+
 ) {}
