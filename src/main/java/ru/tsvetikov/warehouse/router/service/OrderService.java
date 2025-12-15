@@ -1,78 +1,203 @@
-//package ru.tsvetikov.warehouse.router.service;
-//
-//import lombok.RequiredArgsConstructor;
-//import lombok.extern.slf4j.Slf4j;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.stereotype.Service;
-//import org.springframework.transaction.annotation.Transactional;
-//import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
-//import ru.tsvetikov.warehouse.router.model.db.entity.Order;
-//import ru.tsvetikov.warehouse.router.model.db.repository.OrderRepository;
-//import ru.tsvetikov.warehouse.router.model.dto.request.OrderRequest;
-//import ru.tsvetikov.warehouse.router.model.dto.response.OrderResponse;
-//import ru.tsvetikov.warehouse.router.model.mapper.OrderMapper;
-//
-//import java.util.List;
-//import java.util.stream.Collectors;
+package ru.tsvetikov.warehouse.router.service;
 
-//@Slf4j
-//@Service
-//@RequiredArgsConstructor
-//public class OrderService {
-//    private final OrderRepository orderRepository;
-//    private final OrderMapper orderMapper;
-//
-//    @Transactional
-//    public OrderResponse create(OrderRequest request) {
-//        if (orderRepository.findByOrderNumber(request.orderNumber()).isPresent()) {
-//            throw new CommonBackendException(
-//                    "Order with number already exists: " + request.orderNumber(), HttpStatus.CONFLICT);
-//        }
-//
-//        Order order = orderMapper.toEntity(request);
-//        Order saved = orderRepository.save(order);
-//
-//        return orderMapper.toResponseDto(saved);
-//    }
-//
-//    @Transactional(readOnly = true)
-//    public OrderResponse getById(Long id) {
-//        Order order = orderRepository.findById(id)
-//                .orElseThrow(() -> new CommonBackendException("Order not found with id: " + id, HttpStatus.NOT_FOUND));
-//        return orderMapper.toResponseDto(order);
-//    }
-//
-//    @Transactional(readOnly = true)
-//    public List<OrderResponse> getAll() {
-//        return orderRepository.findAll().stream()
-//                .map(orderMapper::toResponseDto)
-//                .collect(Collectors.toList());
-//    }
-//
-//    @Transactional
-//    public void delete(Long id) {
-//        if (!orderRepository.existsById(id)) {
-//            throw new CommonBackendException("Order not found with id: " + id, HttpStatus.NOT_FOUND);
-//        }
-//
-//        orderRepository.deleteById(id);
-//    }
-//
-//    @Transactional
-//    public OrderResponse update(Long id, OrderRequest request) {
-//        Order existing = orderRepository.findById(id)
-//                .orElseThrow(() -> new CommonBackendException("Order not found with id: " + id, HttpStatus.NOT_FOUND));
-//
-//        if (request.orderNumber() != null && !request.orderNumber().equals(existing.getOrderNumber())) {
-//            if (orderRepository.findByOrderNumber(request.orderNumber()).isPresent()) {
-//                throw new CommonBackendException("Order with number already exists: " + request.orderNumber(),
-//                        HttpStatus.CONFLICT);
-//            }
-//        }
-//
-//        orderMapper.updateEntityFromDto(request, existing);
-//        Order updated = orderRepository.save(existing);
-//
-//        return orderMapper.toResponseDto(updated);
-//    }
-//}
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
+import ru.tsvetikov.warehouse.router.model.db.entity.Order;
+import ru.tsvetikov.warehouse.router.model.db.entity.OrderItem;
+import ru.tsvetikov.warehouse.router.model.db.repository.OrderRepository;
+import ru.tsvetikov.warehouse.router.model.dto.request.OrderRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.OrderItemRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.OrderWithItemsRequest;
+import ru.tsvetikov.warehouse.router.model.dto.response.OrderResponse;
+import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
+import ru.tsvetikov.warehouse.router.model.mapper.OrderMapper;
+import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
+
+import java.time.Instant;
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+    private final OrderRepository orderRepository;
+    private final OrderMapper orderMapper;
+    private final OrderItemService orderItemService;
+
+    @Transactional
+    public OrderResponse createEmptyOrder(OrderRequest request) {
+        checkOrderNumberUniqueness(request.orderNumber());
+
+        Order order = orderMapper.toEntity(request);
+        Order saved = orderRepository.save(order);
+
+        log.info("Created empty order: {}", saved.getOrderNumber());
+        return orderMapper.toResponseDto(saved);
+    }
+
+    @Transactional
+    public OrderResponse createOrderWithItems(OrderWithItemsRequest request) {
+        checkOrderNumberUniqueness(request.order().orderNumber());
+
+        Order order = orderMapper.toEntity(request.order());
+        Order savedOrder = orderRepository.save(order);
+
+        if (request.items() != null && !request.items().isEmpty()) {
+            addItemsToOrder(savedOrder, request.items());
+        }
+
+        log.info("Created order {} with {} items",
+                savedOrder.getOrderNumber(),
+                request.items() != null ? request.items().size() : 0);
+        return orderMapper.toResponseDto(savedOrder);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getByNumber(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+        return orderMapper.toResponseDto(order);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getAll(Integer page, Integer perPage,
+                                      String sort, Sort.Direction orderDirection,
+                                      List<OrderStatus> statuses) {
+        Pageable pageRequest = PaginationUtils.getPageRequest(page, perPage, sort, orderDirection);
+
+        if (statuses != null && !statuses.isEmpty()) {
+            return orderRepository.findByStatusIn(statuses, pageRequest)
+                    .map(orderMapper::toResponseDto);
+        } else {
+            return orderRepository.findAll(pageRequest)
+                    .map(orderMapper::toResponseDto);
+        }
+    }
+
+    @Transactional
+    public OrderResponse update(String orderNumber, OrderRequest request) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+        validateOrderCanBeUpdated(order);
+
+        if (request.orderNumber() != null && !request.orderNumber().equals(order.getOrderNumber())) {
+            checkOrderNumberUniqueness(request.orderNumber());
+            order.setOrderNumber(request.orderNumber());
+        }
+
+        orderMapper.updateEntityFromDto(request, order);
+        Order updated = orderRepository.save(order);
+
+        log.info("Updated order: {}", orderNumber);
+        return orderMapper.toResponseDto(updated);
+    }
+
+    @Transactional
+    public void delete(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new CommonBackendException(
+                    String.format("Cannot delete order with status: %s", order.getStatus()),
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        orderRepository.delete(order);
+        log.info("Deleted order: {}", orderNumber);
+    }
+
+    @Transactional
+    public OrderResponse startProcessing(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new CommonBackendException(
+                    "Can only start processing NEW orders", HttpStatus.BAD_REQUEST);
+        }
+
+        if (order.getOrderItems().isEmpty()) {
+            throw new CommonBackendException(
+                    "Cannot start processing empty order", HttpStatus.BAD_REQUEST);
+        }
+
+        order.setStatus(OrderStatus.PROCESSING);
+        Order updated = orderRepository.save(order);
+
+        log.info("Started processing order: {}", orderNumber);
+        return orderMapper.toResponseDto(updated);
+    }
+
+    @Transactional
+    public OrderResponse completeOrder(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
+        if (order.getStatus() != OrderStatus.PROCESSING) {
+            throw new CommonBackendException("Can only complete PROCESSING orders", HttpStatus.BAD_REQUEST);
+        }
+
+        boolean allItemsCollected = order.getOrderItems().stream()
+                .allMatch(OrderItem::isFullyCollected);
+
+        if (!allItemsCollected) {
+            throw new CommonBackendException("Cannot complete order: not all items are collected",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        order.setStatus(OrderStatus.COMPLETED);
+        order.setCompletedAt(Instant.now());
+        Order updated = orderRepository.save(order);
+
+        log.info("Completed order: {}", orderNumber);
+        return orderMapper.toResponseDto(updated);
+    }
+
+    @Transactional
+    public OrderResponse cancelOrder(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new CommonBackendException("Cannot cancel COMPLETED order", HttpStatus.BAD_REQUEST);
+        }
+
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new CommonBackendException("Order is already cancelled", HttpStatus.BAD_REQUEST);
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        Order updated = orderRepository.save(order);
+
+        log.info("Cancelled order: {}", orderNumber);
+        return orderMapper.toResponseDto(updated);
+    }
+
+    private Order findOrderByNumberOrThrow(String orderNumber) {
+        return orderRepository.findByOrderNumber(orderNumber)
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Order with number '%s' not found", orderNumber), HttpStatus.NOT_FOUND));
+    }
+
+    private void checkOrderNumberUniqueness(String orderNumber) {
+        if (orderRepository.existsByOrderNumber(orderNumber)) {
+            throw new CommonBackendException(
+                    String.format("Order with number '%s' already exists", orderNumber), HttpStatus.CONFLICT);
+        }
+    }
+
+    private void validateOrderCanBeUpdated(Order order) {
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new CommonBackendException(
+                    String.format("Cannot update order with status: %s", order.getStatus()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void addItemsToOrder(Order order, List<OrderItemRequest> itemRequests) {
+        for (OrderItemRequest itemRequest : itemRequests) {
+            orderItemService.create(order.getOrderNumber(), itemRequest);
+        }
+    }
+}

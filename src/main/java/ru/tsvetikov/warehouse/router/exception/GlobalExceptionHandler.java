@@ -1,6 +1,5 @@
 package ru.tsvetikov.warehouse.router.exception;
 
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.servlet.error.DefaultErrorAttributes;
@@ -8,6 +7,8 @@ import org.springframework.boot.web.servlet.error.ErrorAttributes;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,7 +18,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -36,8 +36,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CommonBackendException.class)
-    public void handleCommonBackendException(HttpServletResponse response, CommonBackendException ex) throws IOException {
-        response.sendError(ex.getStatus().value(), ex.getMessage());
+    public ResponseEntity<ErrorMessage> handleCommonBackendException(CommonBackendException ex) {
+        log.error("Common error: status={}, message={}", ex.getStatus(), ex.getMessage());
+        return ResponseEntity.status(ex.getStatus()).body(new ErrorMessage(ex.getMessage()));
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
@@ -62,6 +63,14 @@ public class GlobalExceptionHandler {
         String message = fieldError != null ? fieldError.getField() + " " + fieldError.getDefaultMessage() : ex.getMessage();
         log.error(message);
         return ResponseEntity.badRequest().body(new ErrorMessage(message));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorMessage> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.error("Database constraint violation: {}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorMessage("Entity with such parameters already exists"));
     }
 
 }

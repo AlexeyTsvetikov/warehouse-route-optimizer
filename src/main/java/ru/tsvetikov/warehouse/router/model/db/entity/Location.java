@@ -47,10 +47,10 @@ public class Location {
     private Double maxWeight;
 
     @Column(name = "x_coord", nullable = false)
-    private Double xCoord;
+    private Double coordX;
 
     @Column(name = "y_coord", nullable = false)
-    private Double yCoord;
+    private Double coordY;
 
     @Column(name = "description", length = 500)
     private String description;
@@ -65,7 +65,7 @@ public class Location {
 
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
+    private Boolean isActive = true;
 
     @OneToMany(mappedBy = "location", fetch = FetchType.LAZY)
     @JsonManagedReference(value = "location-stock")

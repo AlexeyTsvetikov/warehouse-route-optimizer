@@ -30,7 +30,7 @@ public class OrderItem {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    // Сколько мы уже фактически положили в коробку
+    // Сколько мы уже фактически собрали
     @Column(name = "collected_quantity", nullable = false)
     private Integer collectedQuantity = 0;
 
