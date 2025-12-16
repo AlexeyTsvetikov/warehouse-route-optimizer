@@ -1,6 +1,7 @@
 package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -21,6 +22,12 @@ import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 public class LocationService {
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
+
+    @Cacheable(value = "locations", key = "#code")
+    public Location getByCode(String code) {
+        return locationRepository.findByCode(code)
+                .orElseThrow(() -> new CommonBackendException("Location not found", HttpStatus.NOT_FOUND));
+    }
 
     @Transactional
     public LocationResponse create(LocationRequest request) {

@@ -1,6 +1,7 @@
 package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -24,6 +25,12 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+
+    @Cacheable(value = "products", key = "#sku")
+    public Product getBySku(String sku) {
+        return productRepository.findBySku(sku)
+                .orElseThrow(() -> new CommonBackendException("Product not found: " + sku, HttpStatus.NOT_FOUND));
+    }
 
     @Transactional
     public ProductResponse create(ProductRequest request) {
