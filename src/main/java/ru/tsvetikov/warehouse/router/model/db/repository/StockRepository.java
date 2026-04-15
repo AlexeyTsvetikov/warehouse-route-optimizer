@@ -1,6 +1,8 @@
 package ru.tsvetikov.warehouse.router.model.db.repository;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -15,22 +17,23 @@ import java.util.Optional;
 
 public interface StockRepository extends JpaRepository<Stock, Long> {
 
-    // Метод с блокировкой для transfer
+    // Основной метод для операций с блокировкой
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"product", "location"})
     @Query("SELECT s FROM Stock s WHERE s.product = :product AND s.location = :location")
     Optional<Stock> findByProductAndLocationWithLock(@Param("product") Product product,
                                                      @Param("location") Location location);
 
-    // Для других методов сервиса (increase, decrease, reserve):
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT s FROM Stock s WHERE s.id = :id")
-    Optional<Stock> findByIdWithLock(@Param("id") Long id);
-
+    // Метод для резервации (FIFO стратегия)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"product", "location"})
     @Query("SELECT s FROM Stock s WHERE s.product.id = :productId " +
             "AND s.quantity > s.reservedQuantity " +
             "ORDER BY s.inboundDate ASC")
     List<Stock> findAvailableByProductIdFifoWithLock(@Param("productId") Long productId);
+
+    // Опционально: read-only методы для отчетов (если нужны)
+    @EntityGraph(attributePaths = {"product", "location"})
+    @Query("SELECT s FROM Stock s WHERE s.quantity > 0")
+    Page<Stock> findAllWithDetails(Pageable pageable);
 }
