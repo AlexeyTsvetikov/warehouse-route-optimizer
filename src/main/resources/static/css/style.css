@@ -1,0 +1,106 @@
+body {
+    background: linear-gradient(135deg, #e0f2e9 0%, #c8e6d9 100%);
+    min-height: 100vh;
+}
+.card-custom {
+    border: none;
+    border-radius: 24px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 20px rgba(0, 32, 0, 0.08);
+}
+.form-control {
+    background-color: #ffffff;
+    color: #212529;
+}
+.form-control:focus {
+    background-color: #ffffff;
+    color: #212529;
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+
+.btn-primary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+.btn-primary:hover {
+    background-color: #5a6268;
+    border-color: #5a6268;
+}
+.btn-outline-secondary {
+    border-color: #ced4da;
+    color: #495057;
+}
+.btn-outline-secondary:hover {
+    background-color: #e9ecef;
+    border-color: #adb5bd;
+    color: #212529;
+}
+.btn-success {
+    background-color: #2b7e3a;
+    border-color: #2b7e3a;
+}
+.btn-success:hover {
+    background-color: #1e5a2a;
+    border-color: #1e5a2a;
+}
+.form-label {
+    color: #212529;
+    font-weight: 500;
+}
+h1 {
+    color: #212529;
+}
+.table {
+    color: #212529;
+}
+.table a {
+    color: #212529;
+    text-decoration: none;
+}
+.table a:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+.btn {
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+.btn i {
+    font-size: 1.1rem;
+    vertical-align: middle;
+}
+.btn i.me-2 {
+    margin-right: 6px;
+}
+.pagination-text {
+    color: #212529;
+}
+.form-select {
+    background-color: #ffffff;
+    color: #212529;
+    border-color: #ced4da;
+}
+.form-select:focus {
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+.form-check-input:checked {
+    background-color: #2b7e3a;
+    border-color: #2b7e3a;
+}
+
+.form-select:focus {
+    border-color: #6c757d;
+    box-shadow: 0 0 0 0.2rem rgba(108, 117, 125, 0.25);
+}
+
+.form-select option {
+    background-color: #ffffff;
+    color: #212529;
+}
+
+.form-select option:hover {
+    background-color: #e9ecef;
+}

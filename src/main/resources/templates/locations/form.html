@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Форма локации</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+
+    </style>
+</head>
+<body>
+
+<div class="container mt-5" style="max-width: 700px;">
+    <div class="card card-custom p-4">
+        <h1 class="text-center mb-4">
+            <i th:if="${id == null}" class="bi bi-plus-circle"></i>
+            <i th:unless="${id == null}" class="bi bi-pencil-square"></i>
+            <span th:text="${id != null} ? 'Редактировать локацию' : 'Создать локацию'">Форма</span>
+        </h1>
+
+        <form th:action="@{${id != null ? '/locations/edit/' + id : '/locations/create'}}"
+              th:object="${locationForm}" method="post">
+
+            <div class="mb-3">
+                <label class="form-label" for="code"><i class="bi bi-upc-scan"></i> Код</label>
+                <input type="text" th:field="*{code}" id="code" class="form-control" required aria-label="Код локации">
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="type"><i class="bi bi-grid-3x3-gap-fill"></i> Тип локации</label>
+                <select th:field="*{type}" id="type" class="form-select" aria-label="Тип локации">
+                    <option th:each="t : ${T(ru.tsvetikov.warehouse.router.model.enums.LocationType).values()}"
+                            th:value="${t}" th:text="${t}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" for="width"><i class="bi bi-aspect-ratio"></i> Ширина</label>
+                    <input type="number" step="0.01" th:field="*{width}" id="width" class="form-control"
+                           aria-label="Ширина локации">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" for="depth"><i class="bi bi-aspect-ratio"></i> Глубина</label>
+                    <input type="number" step="0.01" th:field="*{depth}" id="depth" class="form-control"
+                           aria-label="Глубина локации">
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" for="height"><i class="bi bi-aspect-ratio"></i> Высота</label>
+                    <input type="number" step="0.01" th:field="*{height}" id="height" class="form-control"
+                           aria-label="Высота локации">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="maxWeight"><i class="bi bi-handbag-fill"></i> Макс. вес (кг)</label>
+                <input type="number" step="0.01" th:field="*{maxWeight}" id="maxWeight" class="form-control"
+                       aria-label="Максимальный вес в килограммах">
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label" for="coordX"><i class="bi bi-geo-alt"></i> Координата X</label>
+                    <input type="number" step="0.01" th:field="*{coordX}" id="coordX" class="form-control"
+                           aria-label="Координата X на складе">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label" for="coordY"><i class="bi bi-geo-alt"></i> Координата Y</label>
+                    <input type="number" step="0.01" th:field="*{coordY}" id="coordY" class="form-control"
+                           aria-label="Координата Y на складе">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" for="description"><i class="bi bi-file-text"></i> Описание</label>
+                <textarea th:field="*{description}" id="description" class="form-control" rows="2"
+                          aria-label="Описание локации"></textarea>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox"
+                       th:field="*{isActive}"
+                       class="form-check-input"
+                       id="isActive">
+                <label class="form-check-label" for="isActive">
+                    Используется
+                </label>
+            </div>
+
+            <div class="d-flex gap-2 mb-3">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="bi bi-check-lg"></i> Сохранить
+                </button>
+                <a href="/locations" class="btn btn-outline-secondary flex-fill">
+                    <i class="bi bi-x-lg"></i> Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

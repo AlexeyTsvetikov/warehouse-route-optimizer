@@ -3,6 +3,7 @@ package ru.tsvetikov.warehouse.router.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.Location;
 import ru.tsvetikov.warehouse.router.model.db.repository.LocationRepository;
+import ru.tsvetikov.warehouse.router.model.dto.form.LocationForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.LocationRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.LocationResponse;
 import ru.tsvetikov.warehouse.router.model.mapper.LocationMapper;
@@ -51,6 +53,13 @@ public class LocationService {
                 .map(locationMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public Page<LocationResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<Location> categories = locationRepository.searchActive(query, pageable);
+        return categories.map(locationMapper::toResponseDto);
+    }
+
     @Transactional
     public LocationResponse update(Long id, LocationRequest request) {
         Location location = findLocationOrThrow(id);
@@ -62,6 +71,13 @@ public class LocationService {
         locationMapper.updateEntityFromDto(request, location);
         Location updatedLocation = locationRepository.save(location);
         return locationMapper.toResponseDto(updatedLocation);
+    }
+
+    @Transactional
+    public void updateFromWeb(Long id, LocationForm form) {
+        Location location = findLocationOrThrow(id);
+        locationMapper.updateEntityFromForm(form, location);
+        locationRepository.save(location);
     }
 
     @Transactional

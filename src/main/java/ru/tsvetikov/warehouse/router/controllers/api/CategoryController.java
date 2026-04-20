@@ -1,4 +1,4 @@
-package ru.tsvetikov.warehouse.router.controllers;
+package ru.tsvetikov.warehouse.router.controllers.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -41,6 +41,16 @@ public class CategoryController {
                                                    @RequestParam(defaultValue = "name") String sort,
                                                    @RequestParam(defaultValue = "ASC") Sort.Direction order) {
         return categoryService.getAll(page, perPage, sort, order);
+    }
+
+    @Operation(summary = "Поиск категорий по названию или описанию")
+    @GetMapping("/search")
+    public Page<CategoryResponse> searchCategories(@RequestParam String query,
+                                                   @RequestParam(defaultValue = "1") @Min(1) Integer page,
+                                                   @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer perPage,
+                                                   @RequestParam(defaultValue = "name") String sort,
+                                                   @RequestParam(defaultValue = "ASC") Sort.Direction order) {
+        return categoryService.search(query, page, perPage, sort, order);
     }
 
     @Operation(summary = "Обновить категорию")

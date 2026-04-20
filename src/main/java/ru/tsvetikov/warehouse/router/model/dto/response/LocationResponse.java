@@ -13,5 +13,6 @@ public record LocationResponse(
         Double maxWeight,
         Double coordX,
         Double coordY,
-        String description
+        String description,
+        Boolean isActive
 ) {}

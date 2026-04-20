@@ -3,6 +3,7 @@ package ru.tsvetikov.warehouse.router.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -56,6 +57,20 @@ public class ProductService {
                                         String sort, Sort.Direction order) {
         Pageable pageRequest = PaginationUtils.getPageRequest(page, perPage, sort, order);
         return productRepository.findAllByIsActiveTrue(pageRequest)
+                .map(productMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getByCategory(Long categoryId, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        return productRepository.findByCategoryIdAndIsActiveTrue(categoryId, pageable)
+                .map(productMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        return productRepository.searchActive(query, pageable)
                 .map(productMapper::toResponseDto);
     }
 

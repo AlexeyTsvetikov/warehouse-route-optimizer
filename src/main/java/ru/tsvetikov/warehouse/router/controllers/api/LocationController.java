@@ -1,4 +1,4 @@
-package ru.tsvetikov.warehouse.router.controllers;
+package ru.tsvetikov.warehouse.router.controllers.api;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

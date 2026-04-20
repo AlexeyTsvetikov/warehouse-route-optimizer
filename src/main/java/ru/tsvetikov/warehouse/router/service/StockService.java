@@ -3,6 +3,9 @@ package ru.tsvetikov.warehouse.router.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -32,8 +35,27 @@ public class StockService {
     private final LocationService locationService;
     private final StockMapper stockMapper;
 
+    @Transactional(readOnly = true)
+    public List<StockResponse> getByProduct(Long productId) {
+        List<Stock> stocks = stockRepository.findByProductId(productId);
+        return stocks.stream()
+                .map(stockMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<StockResponse> getFiltered(String locationCode, String search, int page, int size) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        String loc = (locationCode != null) ? locationCode : "";
+        String query = (search != null) ? search : "";
+
+        Page<Stock> stocks = stockRepository.findFiltered(loc, query, pageable);
+        return stocks.map(stockMapper::toResponse);
+    }
+
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    @Retryable(retryFor = DataIntegrityViolationException.class, maxAttempts = 3)
+    @Retryable(retryFor = DataIntegrityViolationException.class)
     public StockResponse increaseStock(String productSku, String locationCode, Integer quantity) {
         validateQuantity(quantity);
 
