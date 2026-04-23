@@ -2,6 +2,7 @@ package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -11,8 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.User;
 import ru.tsvetikov.warehouse.router.model.db.repository.UserRepository;
-import ru.tsvetikov.warehouse.router.model.dto.request.UserRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.ChangePasswordRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserCreateRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
+import ru.tsvetikov.warehouse.router.model.enums.Role;
 import ru.tsvetikov.warehouse.router.model.mapper.UserMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
@@ -24,7 +28,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public UserResponse create(UserRequest request) {
+    public UserResponse create(UserCreateRequest request) {
         checkUsernameUniqueness(request.username());
 
         User user = userMapper.toEntity(request);
@@ -48,19 +52,31 @@ public class UserService {
                 .map(userMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public Page<UserResponse> getByRole(Role role, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<User> users = userRepository.searchActiveByRole(role, pageable);
+        return users.map(userMapper::toResponseDto);
+    }
+
+
+    @Transactional(readOnly = true)
+    public Page<UserResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<User> users = userRepository.searchActive(query, pageable);
+        return users.map(userMapper::toResponseDto);
+    }
+
     @Transactional
-    public UserResponse update(Long id, UserRequest request) {
+    public UserResponse update(Long id, UserUpdateRequest request) {
         User user = findUserOrThrow(id);
 
         if (request.username() != null && !request.username().equals(user.getUsername())) {
             checkUsernameUniqueness(request.username());
         }
 
-        if (request.password() != null) {
-            user.setPasswordHash(passwordEncoder.encode(request.password()));
-        }
-
         userMapper.updateEntityFromDto(request, user);
+
         User updated = userRepository.save(user);
         return userMapper.toResponseDto(updated);
     }
@@ -87,6 +103,18 @@ public class UserService {
 
         user.setIsActive(true);
         return userMapper.toResponseDto(user);
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = findUserOrThrow(userId);
+
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
+            throw new CommonBackendException("Старый пароль неверен", HttpStatus.CONFLICT);
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     @Transactional

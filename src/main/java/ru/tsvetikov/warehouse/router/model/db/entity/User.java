@@ -40,10 +40,10 @@ public class User {
     private Role role = Role.PICKER;
 
     @Column(name = "last_known_x")
-    private Double lastKnownX;
+    private Double lastKnownX = 0.0;
 
     @Column(name = "last_known_y")
-    private Double lastKnownY;
+    private Double lastKnownY = 0.0;
 
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)

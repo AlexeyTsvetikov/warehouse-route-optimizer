@@ -72,10 +72,4 @@ public class CategoryWebController {
         categoryService.delete(id);
         return "redirect:/categories";
     }
-
-    @PostMapping("/activate/{id}")
-    public String activate(@PathVariable Long id) {
-        categoryService.activate(id);
-        return "redirect:/categories";
-    }
 }

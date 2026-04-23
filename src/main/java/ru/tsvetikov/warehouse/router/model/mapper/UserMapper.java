@@ -2,7 +2,8 @@ package ru.tsvetikov.warehouse.router.model.mapper;
 
 import org.mapstruct.*;
 import ru.tsvetikov.warehouse.router.model.db.entity.User;
-import ru.tsvetikov.warehouse.router.model.dto.request.UserRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserCreateRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 
 @Mapper(componentModel = "spring")
@@ -12,8 +13,10 @@ public interface UserMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "warehouseTasks", ignore = true)
+    @Mapping(target = "lastKnownX", ignore = true)
+    @Mapping(target = "lastKnownY", ignore = true)
     @Mapping(target = "passwordHash", source = "password")
-    User toEntity(UserRequest userRequest);
+    User toEntity(UserCreateRequest userRequest);
 
     UserResponse toResponseDto(User user);
 
@@ -23,6 +26,8 @@ public interface UserMapper {
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "warehouseTasks", ignore = true)
-    @Mapping(target = "passwordHash", source = "password")
-    void updateEntityFromDto(UserRequest userRequest, @MappingTarget User user);
+    @Mapping(target = "lastKnownX", ignore = true)
+    @Mapping(target = "lastKnownY", ignore = true)
+    @Mapping(target = "passwordHash", ignore = true)
+    void updateEntityFromDto(UserUpdateRequest userRequest, @MappingTarget User user);
 }

@@ -10,7 +10,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import ru.tsvetikov.warehouse.router.model.dto.request.UserRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.ChangePasswordRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserCreateRequest;
+import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 import ru.tsvetikov.warehouse.router.service.UserService;
 
@@ -24,7 +26,7 @@ public class UserController {
     @Operation(summary = "Создать нового пользователя")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse create(@RequestBody @Valid UserRequest request) {
+    public UserResponse create(@RequestBody @Valid UserCreateRequest request) {
         return userService.create(request);
     }
 
@@ -43,10 +45,18 @@ public class UserController {
         return userService.getAll(page, perPage, sort, order);
     }
 
-    @Operation(summary = "Обновить пользователя")
+    @Operation(summary = "Обновить данные пользователя")
     @PutMapping("/{id}")
-    public UserResponse update(@PathVariable Long id, @RequestBody @Valid UserRequest request) {
+    public UserResponse update(@PathVariable Long id, @RequestBody @Valid UserUpdateRequest request) {
         return userService.update(id, request);
+    }
+
+    @Operation(summary = "Изменить пароль пользователя")
+    @PostMapping("/{id}/change-password")
+    @ResponseStatus(HttpStatus.OK)
+    public void changePassword(@PathVariable Long id,
+                               @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(id, request);
     }
 
     @Operation(summary = "Удалить пользователя")

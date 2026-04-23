@@ -122,10 +122,4 @@ public class ProductWebController {
         productService.delete(id);
         return "redirect:/products";
     }
-
-    @PostMapping("/activate/{id}")
-    public String activate(@PathVariable Long id) {
-        productService.activate(id);
-        return "redirect:/products";
-    }
 }
