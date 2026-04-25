@@ -2,12 +2,14 @@ package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.tsvetikov.warehouse.router.event.OrderItemCompletedEvent;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.Order;
 import ru.tsvetikov.warehouse.router.model.db.entity.OrderItem;
@@ -30,6 +32,8 @@ public class OrderItemService {
     private final OrderItemMapper orderItemMapper;
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
+    private final StockService stockService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public OrderItemResponse create(String orderNumber, OrderItemRequest request) {
@@ -39,8 +43,9 @@ public class OrderItemService {
         Product product = findProductBySkuOrThrow(request.productSku());
         checkProductNotInOrder(order, product);
 
-        //TODO: Проверка доступности товара на складе
-        // checkProductAvailability(product, request.quantity());
+        stockService.checkAvailability(request.productSku(), request.quantity());
+
+        stockService.reserveStock(request.productSku(), request.quantity());
 
         OrderItem item = orderItemMapper.toEntity(request);
         item.setOrder(order);
@@ -77,9 +82,28 @@ public class OrderItemService {
         if (request.productSku() != null && !request.productSku().equals(item.getProduct().getSku())) {
             Product newProduct = findProductBySkuOrThrow(request.productSku());
             checkProductNotInOrder(item.getOrder(), newProduct);
-            //TODO: Проверка доступности товара на складе
-            // checkProductAvailability(newProduct, request.quantity());
+
+            stockService.releaseReserved(item.getProduct().getSku(), item.getQuantity());
+
+            stockService.checkAvailability(request.productSku(), request.quantity());
+
+            stockService.reserveStock(request.productSku(), request.quantity());
+
             item.setProduct(newProduct);
+
+        } else if (request.quantity() != null && !request.quantity().equals(item.getQuantity())) {
+
+            int oldQty = item.getQuantity();
+            int newQty = request.quantity();
+
+            if (newQty > oldQty) {
+                int additional = newQty - oldQty;
+                stockService.checkAvailability(item.getProduct().getSku(), additional);
+                stockService.reserveStock(item.getProduct().getSku(), additional);
+            } else {
+                int toRelease = oldQty - newQty;
+                stockService.releaseReserved(item.getProduct().getSku(), toRelease);
+            }
         }
 
         if (request.quantity() != null && request.quantity() <= 0) {
@@ -96,6 +120,8 @@ public class OrderItemService {
         OrderItem item = findOrderItemOrThrow(id);
         validateOrderItemBelongsToOrder(item, orderNumber);
         validateOrderCanBeModified(item.getOrder());
+
+        stockService.releaseReserved(item.getProduct().getSku(), item.getQuantity());
 
         orderItemRepository.delete(item);
     }
@@ -117,10 +143,10 @@ public class OrderItemService {
         item.setCollectedQuantity(collectedQuantity);
         OrderItem updated = orderItemRepository.save(item);
 
-        // TODO: При полном сборе товара - триггер для обновления статуса задачи
-        // if (updated.isFullyCollected()) {
-        //     warehouseTaskService.onOrderItemFullyCollected(updated);
-        // }
+        if (updated.isFullyCollected()) {
+            eventPublisher.publishEvent(new OrderItemCompletedEvent(updated));
+            log.info("Order item {} fully collected. Event published.", id);
+        }
 
         log.info("Updated collected quantity for item {}: {}/{}",
                 id, collectedQuantity, item.getQuantity());

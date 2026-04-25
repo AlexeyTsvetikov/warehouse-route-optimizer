@@ -1,12 +1,15 @@
 package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.tsvetikov.warehouse.router.event.OrderItemCompletedEvent;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.*;
 import ru.tsvetikov.warehouse.router.model.db.repository.*;
@@ -20,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WarehouseTaskService {
@@ -29,6 +33,8 @@ public class WarehouseTaskService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final TaskCompletionService taskCompletionService;
+    private final StockService stockService;
 
     @Transactional
     public WarehouseTaskResponse create(WarehouseTaskRequest request) {
@@ -133,7 +139,7 @@ public class WarehouseTaskService {
 
         if (request.orderNumber() != null) {
             if (task.getOrder() != null &&
-                    !request.orderNumber().equals(task.getOrder().getOrderNumber())) {
+                !request.orderNumber().equals(task.getOrder().getOrderNumber())) {
                 throw new CommonBackendException("Cannot change order for existing task", HttpStatus.BAD_REQUEST);
             }
             if (task.getOrder() == null) {
@@ -151,8 +157,7 @@ public class WarehouseTaskService {
     public void delete(Long id) {
         WarehouseTask task = findTaskOrThrow(id);
 
-        if (task.getStatus() != WarehouseTaskStatus.CREATED &&
-                task.getStatus() != WarehouseTaskStatus.ASSIGNED) {
+        if (task.getStatus() != WarehouseTaskStatus.CREATED && task.getStatus() != WarehouseTaskStatus.ASSIGNED) {
             throw new CommonBackendException(
                     String.format("Cannot cancel task with status: %s", task.getStatus()), HttpStatus.BAD_REQUEST);
         }
@@ -217,10 +222,7 @@ public class WarehouseTaskService {
         task.setCompletedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
 
-        // TODO: updateStockOnTaskCompletion(task);
-        // - Уменьшить stock в sourceLocation
-        // - Увеличить stock в targetLocation
-        // - Обновить OrderItem.collectedQuantity если есть order
+        updateStockForTask(task, confirmedQuantity);
 
         WarehouseTask saved = warehouseTaskRepository.save(task);
         return warehouseTaskMapper.toResponseDto(saved);
@@ -244,6 +246,26 @@ public class WarehouseTaskService {
         Page<WarehouseTask> tasks = warehouseTaskRepository.findByAssignedUserIdAndStatusIn(
                 user.getId(), statuses, pageRequest);
         return tasks.map(warehouseTaskMapper::toResponseDto);
+    }
+
+    @EventListener
+    public void onOrderItemCompleted(OrderItemCompletedEvent event) {
+        OrderItem orderItem = event.orderItem();
+        log.info("Received OrderItemCompletedEvent for item {}", orderItem.getId());
+
+        WarehouseTask task = warehouseTaskRepository
+                .findByOrderOrderNumberAndProductSku(orderItem.getOrder().getOrderNumber(),
+                        orderItem.getProduct().getSku())
+                .orElse(null);
+
+        if (task == null) {
+            log.warn("No task found for order {} and product {}",
+                    orderItem.getOrder().getOrderNumber(),
+                    orderItem.getProduct().getSku());
+            return;
+        }
+
+        taskCompletionService.finalizeTask(task.getId(), orderItem.getQuantity());
     }
 
     private WarehouseTask findTaskOrThrow(Long id) {
@@ -279,5 +301,31 @@ public class WarehouseTaskService {
     private String generateTaskNumber() {
         Long maxId = warehouseTaskRepository.findMaxId().orElse(0L);
         return String.format("TASK-%06d", maxId + 1);
+    }
+
+    private void updateStockForTask(WarehouseTask task, Integer confirmedQuantity) {
+        String productSku = task.getProduct().getSku();
+
+        switch (task.getType()) {
+            case PICKING -> {
+                stockService.decreaseStock(productSku, task.getSourceLocation().getCode(), confirmedQuantity);
+                log.debug("Stock decreased for PICKING task: {} @ {} -{}",
+                        productSku, task.getSourceLocation().getCode(), confirmedQuantity);
+            }
+            case MOVEMENT -> {
+                stockService.transferStock(productSku, confirmedQuantity,
+                        task.getSourceLocation().getCode(),
+                        task.getTargetLocation().getCode());
+                log.debug("Stock transferred for MOVEMENT task: {} from {} to {}, quantity {}",
+                        productSku, task.getSourceLocation().getCode(),
+                        task.getTargetLocation().getCode(), confirmedQuantity);
+            }
+            case RECEIVING -> {
+                stockService.increaseStock(productSku, task.getTargetLocation().getCode(), confirmedQuantity);
+                log.debug("Stock increased for RECEIVING task: {} @ {} +{}",
+                        productSku, task.getTargetLocation().getCode(), confirmedQuantity);
+            }
+            default -> log.warn("Unsupported task type for stock update: {}", task.getType());
+        }
     }
 }

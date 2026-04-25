@@ -21,7 +21,6 @@ import ru.tsvetikov.warehouse.router.model.dto.response.StockResponse;
 import ru.tsvetikov.warehouse.router.model.mapper.StockMapper;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -56,7 +55,7 @@ public class StockService {
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     @Retryable(retryFor = DataIntegrityViolationException.class)
-    public StockResponse increaseStock(String productSku, String locationCode, Integer quantity) {
+    public void increaseStock(String productSku, String locationCode, Integer quantity) {
         validateQuantity(quantity);
 
         log.debug("Increasing stock: {} @ {} +{}", productSku, locationCode, quantity);
@@ -71,11 +70,10 @@ public class StockService {
 
         log.info("Increased stock: {} @ {} +{}. New total: {}",
                 productSku, locationCode, quantity, stock.getQuantity());
-        return stockMapper.toResponse(stock);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public StockResponse decreaseStock(String productSku, String locationCode, Integer quantity) {
+    public void decreaseStock(String productSku, String locationCode, Integer quantity) {
         validateQuantity(quantity);
 
         log.debug("Decreasing stock: {} @ {} -{}", productSku, locationCode, quantity);
@@ -87,8 +85,7 @@ public class StockService {
                 .orElseThrow(() -> {
                     log.warn("Stock not found: {} @ {}", productSku, locationCode);
                     return new CommonBackendException(
-                            String.format("Stock not found for product %s at location %s",
-                                    productSku, locationCode),
+                            String.format("Stock not found for product %s at location %s", productSku, locationCode),
                             HttpStatus.NOT_FOUND);
                 });
 
@@ -98,15 +95,13 @@ public class StockService {
                     productSku, locationCode, availableForDecrease, quantity);
             throw new CommonBackendException(
                     String.format("Not enough available stock. Available: %d, Requested: %d",
-                            availableForDecrease, quantity),
-                    HttpStatus.CONFLICT);
+                            availableForDecrease, quantity), HttpStatus.CONFLICT);
         }
 
         stock.setQuantity(stock.getQuantity() - quantity);
 
         log.info("Decreased stock: {} @ {} -{}. New total: {}",
                 productSku, locationCode, quantity, stock.getQuantity());
-        return stockMapper.toResponse(stock);
     }
 
     @Transactional(timeout = 5)
@@ -145,44 +140,31 @@ public class StockService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public List<StockResponse> reserveStock(String productSku, Integer quantity) {
+    public void reserveStock(String productSku, Integer quantity) {
         validateQuantity(quantity);
-        Product product = productService.getBySku(productSku);
+        checkAvailability(productSku, quantity);
 
+        Product product = productService.getBySku(productSku);
         List<Stock> stocks = stockRepository.findAvailableByProductIdFifoWithLock(product.getId());
 
-        int totalAvailable = stocks.stream()
-                .mapToInt(Stock::getAvailableQuantity)
-                .sum();
-
-        if (totalAvailable < quantity) {
-            throw new CommonBackendException(
-                    String.format("Not enough available stock for %s. Available: %d, Requested: %d",
-                            productSku, totalAvailable, quantity),
-                    HttpStatus.CONFLICT);
-        }
-
-        List<Stock> affected = new ArrayList<>();
         int remaining = quantity;
-
         for (Stock stock : stocks) {
             if (remaining <= 0) break;
-
             int available = stock.getAvailableQuantity();
-            if (available <= 0) continue;
-
-            int toReserve = Math.min(available, remaining);
-            stock.setReservedQuantity(stock.getReservedQuantity() + toReserve);
-            affected.add(stock);
-            remaining -= toReserve;
+            if (available > 0) {
+                int toReserve = Math.min(available, remaining);
+                stock.setReservedQuantity(stock.getReservedQuantity() + toReserve);
+                remaining -= toReserve;
+            }
         }
 
-        log.info("Reserved {} items of {} across {} stocks",
-                quantity, productSku, affected.size());
+        if (remaining > 0) {
+            throw new CommonBackendException(
+                    String.format("Inconsistent state: failed to reserve full quantity for %s", productSku),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
-        return affected.stream()
-                .map(stockMapper::toResponse)
-                .collect(Collectors.toList());
+        log.info("Reserved {} items of {}", quantity, productSku);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -218,6 +200,49 @@ public class StockService {
                                 HttpStatus.CONFLICT);
                     });
         }
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void checkAvailability(String productSku, Integer requiredQuantity) {
+        if (requiredQuantity == null || requiredQuantity <= 0) {
+            throw new CommonBackendException("Quantity must be positive", HttpStatus.BAD_REQUEST);
+        }
+
+        Product product = productService.getBySku(productSku);
+        int totalAvailable = stockRepository.sumAvailableQuantityByProductId(product.getId());
+        if (totalAvailable < requiredQuantity) {
+            throw new CommonBackendException(
+                    String.format("Not enough available stock for product %s. Required: %d, Available: %d",
+                            productSku, requiredQuantity, totalAvailable),
+                    HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void releaseReserved(String productSku, Integer quantity) {
+        Product product = productService.getBySku(productSku);
+        List<Stock> stocks = stockRepository.findAvailableByProductIdFifoWithLock(product.getId());
+
+        int totalReserved = stocks.stream().mapToInt(Stock::getReservedQuantity).sum();
+        if (totalReserved < quantity) {
+            throw new CommonBackendException(
+                    String.format("Not enough reserved stock to release for product %s. Available reserved: %d, Requested: %d",
+                            productSku, totalReserved, quantity),
+                    HttpStatus.CONFLICT);
+        }
+
+        int remaining = quantity;
+        for (Stock stock : stocks) {
+            if (remaining <= 0) break;
+            int reserved = stock.getReservedQuantity();
+            if (reserved > 0) {
+                int toRelease = Math.min(reserved, remaining);
+                stock.setReservedQuantity(stock.getReservedQuantity() - toRelease);
+                remaining -= toRelease;
+            }
+        }
+
+        log.info("Released {} reserved items of {}", quantity, productSku);
     }
 
     private void validateQuantity(Integer quantity) {

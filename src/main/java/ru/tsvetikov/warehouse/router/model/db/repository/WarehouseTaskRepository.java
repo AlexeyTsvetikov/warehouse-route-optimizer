@@ -23,4 +23,5 @@ public interface WarehouseTaskRepository extends JpaRepository<WarehouseTask, Lo
 
     Page<WarehouseTask> findByStatusIn(List<WarehouseTaskStatus> statuses, Pageable pageable);
 
+    Optional<WarehouseTask> findByOrderOrderNumberAndProductSku(String orderNumber, String productSku);
 }
