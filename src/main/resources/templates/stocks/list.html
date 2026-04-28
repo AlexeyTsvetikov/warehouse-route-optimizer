@@ -83,7 +83,7 @@
                th:unless="${currentPage == 1}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left"></i> Назад
             </a>
-            <span>Страница<strong th:text="${currentPage}"></strong> из <strong
+            <span>Страница <strong th:text="${currentPage}"></strong> из <strong
                     th:text="${totalPages}"></strong></span>
             <a th:href="@{/stocks(page=${currentPage + 1}, location=${selectedLocation}, search=${search})}"
                th:unless="${currentPage == totalPages}" class="btn btn-outline-secondary">

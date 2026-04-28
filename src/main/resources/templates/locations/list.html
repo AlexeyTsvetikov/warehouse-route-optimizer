@@ -83,7 +83,7 @@
                 <i class="bi bi-arrow-left"></i> Назад
             </a>
             <span class="pagination-text">
-                <i class="bi bi-layout-text-window"></i> Страница<strong th:text="${currentPage}"></strong> из <strong
+                <i class="bi bi-layout-text-window"></i> Страница <strong th:text="${currentPage}"></strong> из <strong
                     th:text="${totalPages}"></strong>
             </span>
             <a th:href="@{/locations(page=${currentPage + 1}, search=${search})}"

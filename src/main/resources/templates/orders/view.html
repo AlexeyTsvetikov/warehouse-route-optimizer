@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Карточка заказа</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .nav-tabs {
+            display: flex;
+            flex-wrap: nowrap;
+            border-bottom: none;
+        }
+
+        .nav-tabs .nav-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .nav-tabs .nav-link {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #495057;
+            font-weight: 500;
+            padding: 10px 0;
+            transition: all 0.2s ease;
+        }
+
+        .nav-tabs .nav-link.active {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+
+        .nav-tabs .nav-link:hover:not(.active) {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .table-equal-cols {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .table-equal-cols th,
+        .table-equal-cols td {
+            width: 50%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5">
+    <div class="card card-custom p-4">
+
+        <h1 class="text-center mb-4">
+            <i class="bi bi-truck"></i> Заказ <span th:text="${order.orderNumber}"></span>
+        </h1>
+
+        <ul class="nav nav-tabs mb-3" id="orderTabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="main-tab" data-bs-toggle="tab" href="#main" role="tab">Основное</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="items-tab" data-bs-toggle="tab" href="#items" role="tab">Позиции</a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Вкладка Основное -->
+            <div class="tab-pane active" id="main">
+                <table class="table table-bordered table-equal-cols">
+                    <tr>
+                        <th>Тип</th>
+                        <td th:text="${order.type}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Клиент</th>
+                        <td th:text="${order.customerName != null ? order.customerName : '—'}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Регион доставки</th>
+                        <td th:text="${order.destinationRegion}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Приоритет</th>
+                        <td th:text="${order.priority}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Плановая отгрузка</th>
+                        <td th:text="${#temporals.format(order.plannedDeparture, 'dd.MM.yyyy HH:mm')}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Статус</th>
+                        <td>
+                        <span th:class="${order.status.name() == 'NEW' ? 'badge-new' :
+                  (order.status.name() == 'PROCESSING' ? 'badge-processing' :
+                  (order.status.name() == 'COMPLETED' ? 'badge-completed' : 'badge-cancelled'))}"
+                              th:text="${order.status}"></span>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- Кнопки действий (только на вкладке Основное) -->
+                <div class="d-flex gap-2 mt-4">
+                    <div class="flex-fill" th:if="${order.status.name() == 'NEW'}">
+                        <form th:action="@{/orders/start/{orderNumber}(orderNumber=${order.orderNumber})}"
+                              method="post">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                <i class="bi bi-play-fill"></i> Старт
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="flex-fill" th:if="${order.status.name() == 'NEW'}">
+                        <a th:href="@{/orders/edit/{orderNumber}(orderNumber=${order.orderNumber})}"
+                           class="btn btn-secondary w-100">
+                            <i class="bi bi-pencil-square"></i> Редактировать
+                        </a>
+                    </div>
+
+                    <div class="flex-fill" th:if="${order.status.name() == 'PROCESSING'}">
+                        <form th:action="@{/orders/complete/{orderNumber}(orderNumber=${order.orderNumber})}"
+                              method="post">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                <i class="bi bi-check-lg"></i> Завершить
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="flex-fill"
+                         th:if="${order.status.name() != 'CANCELLED' and order.status.name() != 'COMPLETED'}">
+                        <form th:action="@{/orders/cancel/{orderNumber}(orderNumber=${order.orderNumber})}"
+                              method="post">
+                            <button type="submit" class="btn btn-secondary w-100">
+                                <i class="bi bi-x-lg"></i> Отменить
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <!-- Кнопка назад (только на вкладке Основное) -->
+                <div class="d-flex mt-3">
+                    <a href="/orders" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+
+            <!-- Вкладка Позиции -->
+            <div class="tab-pane fade" id="items">
+                <!-- Кнопка добавления (только для статуса NEW) -->
+                <div th:if="${order.status.name() == 'NEW'}" class="row g-2 mb-3">
+                    <div class="col-12 col-md-auto ms-auto">
+                        <a th:href="@{/orders/{orderNumber}/items/create(orderNumber=${order.orderNumber})}"
+                           class="btn btn-success w-100">
+                            <i class="bi bi-plus-lg"></i> Добавить товар
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Таблица позиций -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th><i class="bi bi-upc-scan"></i> SKU</th>
+                            <th><i class="bi bi-tag"></i> Название</th>
+                            <th><i class="bi bi-123"></i> Количество</th>
+                            <th><i class="bi bi-check-circle"></i> Собрано</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${items}"
+                            th:if="${order.status.name() == 'NEW'}"
+                            th:data-url="@{/orders/{orderNumber}/items/edit/{id}(orderNumber=${order.orderNumber}, id=${item.id})}"
+                            onclick="window.location.href=this.getAttribute('data-url')"
+                            style="cursor: pointer;">
+                            <td class="fw-bold" th:text="${item.productSku}">—</td>
+                            <td th:text="${item.productName}">—</td>
+                            <td th:text="${item.quantity}">0</td>
+                            <td th:text="${item.collectedQuantity}">0</td>
+                        </tr>
+                        <tr th:each="item : ${items}" th:unless="${order.status.name() == 'NEW'}">
+                            <td class="fw-bold" th:text="${item.productSku}">—</td>
+                            <td th:text="${item.productName}">—</td>
+                            <td th:text="${item.quantity}">0</td>
+                            <td th:text="${item.collectedQuantity}">0</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Кнопка назад -->
+                <div class="d-flex mt-3">
+                    <a href="/orders" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-left"></i> Назад к списку
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.location.hash === '#items') {
+            const itemsTab = document.querySelector('#items-tab');
+            if (itemsTab) {
+                new bootstrap.Tab(itemsTab).show();
+            }
+        }
+    });
+</script>
+</body>
+</html>

@@ -33,9 +33,21 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createEmptyOrder(OrderRequest request) {
-        checkOrderNumberUniqueness(request.orderNumber());
+        String orderNumber = generateOrderNumber();
+
+        int attempts = 0;
+        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
+            orderNumber = generateOrderNumber();
+            attempts++;
+        }
+
+        if (orderRepository.existsByOrderNumber(orderNumber)) {
+            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
+                    HttpStatus.CONFLICT);
+        }
 
         Order order = orderMapper.toEntity(request);
+        order.setOrderNumber(orderNumber);
         Order saved = orderRepository.save(order);
 
         log.info("Created empty order: {}", saved.getOrderNumber());
@@ -44,9 +56,21 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createOrderWithItems(OrderWithItemsRequest request) {
-        checkOrderNumberUniqueness(request.order().orderNumber());
+        String orderNumber = generateOrderNumber();
+
+        int attempts = 0;
+        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
+            orderNumber = generateOrderNumber();
+            attempts++;
+        }
+
+        if (orderRepository.existsByOrderNumber(orderNumber)) {
+            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
+                    HttpStatus.CONFLICT);
+        }
 
         Order order = orderMapper.toEntity(request.order());
+        order.setOrderNumber(orderNumber);
         Order savedOrder = orderRepository.save(order);
 
         if (request.items() != null && !request.items().isEmpty()) {
@@ -66,29 +90,30 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public Page<OrderResponse> getAll(Integer page, Integer perPage,
-                                      String sort, Sort.Direction orderDirection,
-                                      List<OrderStatus> statuses) {
-        Pageable pageRequest = PaginationUtils.getPageRequest(page, perPage, sort, orderDirection);
+    public Page<OrderResponse> getAll(int page, int size, String sort, Sort.Direction orderDirection) {
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, orderDirection);
+        return orderRepository.findAll(pageable)
+                .map(orderMapper::toResponseDto);
+    }
 
-        if (statuses != null && !statuses.isEmpty()) {
-            return orderRepository.findByStatusIn(statuses, pageRequest)
-                    .map(orderMapper::toResponseDto);
-        } else {
-            return orderRepository.findAll(pageRequest)
-                    .map(orderMapper::toResponseDto);
-        }
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> search(String query, int page, int size, String sort, Sort.Direction orderDirection) {
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, orderDirection);
+        return orderRepository.search(query, pageable)
+                .map(orderMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrderResponse> getByStatuses(List<OrderStatus> statuses, int page, int size, String sort, Sort.Direction orderDirection) {
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, orderDirection);
+        return orderRepository.findByStatusIn(statuses, pageable)
+                .map(orderMapper::toResponseDto);
     }
 
     @Transactional
     public OrderResponse update(String orderNumber, OrderRequest request) {
         Order order = findOrderByNumberOrThrow(orderNumber);
         validateOrderCanBeUpdated(order);
-
-        if (request.orderNumber() != null && !request.orderNumber().equals(order.getOrderNumber())) {
-            checkOrderNumberUniqueness(request.orderNumber());
-            order.setOrderNumber(request.orderNumber());
-        }
 
         orderMapper.updateEntityFromDto(request, order);
         Order updated = orderRepository.save(order);
@@ -175,17 +200,15 @@ public class OrderService {
         return orderMapper.toResponseDto(updated);
     }
 
+    private String generateOrderNumber() {
+        Long maxId = orderRepository.findMaxId().orElse(0L);
+        return String.format("ORD-%05d", maxId + 1);
+    }
+
     private Order findOrderByNumberOrThrow(String orderNumber) {
         return orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new CommonBackendException(
                         String.format("Order with number '%s' not found", orderNumber), HttpStatus.NOT_FOUND));
-    }
-
-    private void checkOrderNumberUniqueness(String orderNumber) {
-        if (orderRepository.existsByOrderNumber(orderNumber)) {
-            throw new CommonBackendException(
-                    String.format("Order with number '%s' already exists", orderNumber), HttpStatus.CONFLICT);
-        }
     }
 
     private void validateOrderCanBeUpdated(Order order) {

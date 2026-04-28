@@ -47,12 +47,21 @@ public class OrderController {
 
     @Operation(summary = "Получить все заказы с фильтрацией по статусам")
     @GetMapping
-    public Page<OrderResponse> getAll(@RequestParam(required = false) List<OrderStatus> statuses,
-                                      @RequestParam(defaultValue = "1") @Min(1) Integer page,
-                                      @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer perPage,
-                                      @RequestParam(defaultValue = "createdAt") String sort,
-                                      @RequestParam(defaultValue = "DESC") Sort.Direction order) {
-        return orderService.getAll(page, perPage, sort, order, statuses);
+    public Page<OrderResponse> getAll(
+            @RequestParam(required = false) List<OrderStatus> statuses,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "1") @Min(1) Integer page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer perPage,
+            @RequestParam(defaultValue = "createdAt") String sort,
+            @RequestParam(defaultValue = "DESC") Sort.Direction order) {
+
+        if (search != null && !search.isBlank()) {
+            return orderService.search(search, page, perPage, sort, order);
+        }
+        if (statuses != null && !statuses.isEmpty()) {
+            return orderService.getByStatuses(statuses, page, perPage, sort, order);
+        }
+        return orderService.getAll(page, perPage, sort, order);
     }
 
     @Operation(summary = "Обновить заказ")

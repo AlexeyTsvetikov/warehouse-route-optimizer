@@ -300,7 +300,7 @@ public class WarehouseTaskService {
 
     private String generateTaskNumber() {
         Long maxId = warehouseTaskRepository.findMaxId().orElse(0L);
-        return String.format("TASK-%06d", maxId + 1);
+        return String.format("TASK-%05d", maxId + 1);
     }
 
     private void updateStockForTask(WarehouseTask task, Integer confirmedQuantity) {

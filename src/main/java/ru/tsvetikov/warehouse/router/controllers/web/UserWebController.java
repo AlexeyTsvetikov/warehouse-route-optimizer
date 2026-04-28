@@ -6,7 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.UserEditForm;
 import ru.tsvetikov.warehouse.router.model.dto.form.UserCreateForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.ChangePasswordRequest;
@@ -15,7 +17,6 @@ import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 import ru.tsvetikov.warehouse.router.model.enums.Role;
 import ru.tsvetikov.warehouse.router.service.UserService;
-
 @Controller
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -58,15 +59,28 @@ public class UserWebController {
     }
 
     @PostMapping("/create")
-    public String create(@Valid @ModelAttribute("userForm") UserCreateForm form) {
-        UserCreateRequest request = new UserCreateRequest(
-                form.getUsername(),
-                form.getPassword(),
-                form.getFirstName(),
-                form.getLastName(),
-                form.getRole());
-        userService.create(request);
-        return "redirect:/users";
+    public String create(@Valid @ModelAttribute("userForm") UserCreateForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            return "users/form";
+        }
+
+        try {
+            UserCreateRequest request = new UserCreateRequest(
+                    form.getUsername(),
+                    form.getPassword(),
+                    form.getFirstName(),
+                    form.getLastName(),
+                    form.getRole());
+            userService.create(request);
+            return "redirect:/users";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("userForm", form);
+            return "users/form";
+        }
     }
 
     @GetMapping("/edit/{id}")
@@ -84,14 +98,29 @@ public class UserWebController {
 
     @PostMapping("/edit/{id}")
     public String update(@PathVariable Long id,
-                         @Valid @ModelAttribute("userEditForm") UserEditForm form) {
-        UserUpdateRequest request = new UserUpdateRequest(
-                form.getUsername(),
-                form.getFirstName(),
-                form.getLastName(),
-                form.getRole());
-        userService.update(id, request);
-        return "redirect:/users";
+                         @Valid @ModelAttribute("userForm") UserEditForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("id", id);
+            return "users/form";
+        }
+
+        try {
+            UserUpdateRequest request = new UserUpdateRequest(
+                    form.getUsername(),
+                    form.getFirstName(),
+                    form.getLastName(),
+                    form.getRole());
+            userService.update(id, request);
+            return "redirect:/users";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("userForm", form);
+            model.addAttribute("id", id);
+            return "users/form";
+        }
     }
 
     @GetMapping("/change-password/{id}")

@@ -14,6 +14,8 @@ import ru.tsvetikov.warehouse.router.model.dto.request.ProductRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.ProductResponse;
 import ru.tsvetikov.warehouse.router.service.ProductService;
 
+import java.util.List;
+
 
 @Tag(name = "Products", description = "Управление товарами на складе")
 @RestController
@@ -42,6 +44,14 @@ public class ProductController {
                                         @RequestParam(defaultValue = "sku") String sort,
                                         @RequestParam(defaultValue = "ASC") Sort.Direction order) {
         return productService.getAll(page, perPage, sort, order);
+    }
+
+    @Operation(summary = "Поиск товаров по SKU или названию")
+    @GetMapping("/search")
+    public List<ProductResponse> search(@RequestParam String query,
+                                        @RequestParam(defaultValue = "1") int page,
+                                        @RequestParam(defaultValue = "20") int size) {
+        return productService.search(query, page, size, "sku", Sort.Direction.ASC).getContent();
     }
 
     @Operation(summary = "Обновить товар")

@@ -76,6 +76,11 @@ public class LocationService {
     @Transactional
     public void updateFromWeb(Long id, LocationForm form) {
         Location location = findLocationOrThrow(id);
+
+        if (!form.getCode().equals(location.getCode())) {
+            checkCodeUniqueness(form.getCode());
+        }
+
         locationMapper.updateEntityFromForm(form, location);
         locationRepository.save(location);
     }

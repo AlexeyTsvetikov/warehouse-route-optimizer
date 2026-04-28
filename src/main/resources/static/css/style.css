@@ -104,3 +104,35 @@ h1 {
 .form-select option:hover {
     background-color: #e9ecef;
 }
+
+.badge-new {
+    background-color: rgba(44, 95, 138, 0.1);
+    color: #2c5f8a;
+    border: 1px solid rgba(44, 95, 138, 0.3);
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}
+
+.badge-processing {
+    background-color: rgba(193, 126, 42, 0.1);
+    color: #c17e2a;
+    border: 1px solid rgba(193, 126, 42, 0.3);
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}
+
+.badge-completed {
+    background-color: rgba(42, 122, 42, 0.1);
+    color: #2a7a2a;
+    border: 1px solid rgba(42, 122, 42, 0.3);
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}
+
+.badge-cancelled {
+    background-color: rgba(139, 60, 60, 0.1);
+    color: #8b3c3c;
+    border: 1px solid rgba(139, 60, 60, 0.3);
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}

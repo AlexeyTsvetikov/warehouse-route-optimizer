@@ -23,6 +23,9 @@ import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
 import ru.tsvetikov.warehouse.router.model.mapper.OrderItemMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Slf4j
 @Service
@@ -73,26 +76,35 @@ public class OrderItemService {
         return items.map(orderItemMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public List<OrderItemResponse> getByOrderForWeb(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+        List<OrderItem> items = orderItemRepository.findByOrderIdOrderByIdAsc(order.getId()); // сортировка по id
+        return items.stream()
+                .map(orderItemMapper::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public OrderItemResponse update(String orderNumber, Long id, OrderItemRequest request) {
         OrderItem item = findOrderItemOrThrow(id);
         validateOrderItemBelongsToOrder(item, orderNumber);
         validateOrderCanBeModified(item.getOrder());
 
-        if (request.productSku() != null && !request.productSku().equals(item.getProduct().getSku())) {
+        boolean productChanged = request.productSku() != null && !request.productSku().equals(item.getProduct().getSku());
+
+        if (productChanged) {
             Product newProduct = findProductBySkuOrThrow(request.productSku());
             checkProductNotInOrder(item.getOrder(), newProduct);
 
             stockService.releaseReserved(item.getProduct().getSku(), item.getQuantity());
-
             stockService.checkAvailability(request.productSku(), request.quantity());
-
             stockService.reserveStock(request.productSku(), request.quantity());
 
             item.setProduct(newProduct);
+        }
 
-        } else if (request.quantity() != null && !request.quantity().equals(item.getQuantity())) {
-
+        if (request.quantity() != null && !request.quantity().equals(item.getQuantity())) {
             int oldQty = item.getQuantity();
             int newQty = request.quantity();
 

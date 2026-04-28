@@ -11,7 +11,7 @@ public interface OrderItemMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "order", ignore = true)
     @Mapping(target = "product", ignore = true)
-    @Mapping(target = "collectedQuantity", source = "collectedQuantity", defaultValue = "0")
+    @Mapping(target = "collectedQuantity", ignore = true)
     OrderItem toEntity(OrderItemRequest request);
 
     @Mapping(target = "orderNumber", source = "order.orderNumber")

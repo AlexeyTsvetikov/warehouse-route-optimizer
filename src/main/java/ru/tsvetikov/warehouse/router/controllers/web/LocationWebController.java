@@ -6,7 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.LocationForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.LocationRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.LocationResponse;
@@ -43,20 +45,33 @@ public class LocationWebController {
     }
 
     @PostMapping("/create")
-    public String create(@Valid @ModelAttribute("locationForm") LocationForm form) {
-        LocationRequest request = new LocationRequest(
-                form.getCode(),
-                form.getType(),
-                form.getWidth(),
-                form.getHeight(),
-                form.getDepth(),
-                form.getMaxWeight(),
-                form.getCoordX(),
-                form.getCoordY(),
-                form.getDescription()
-        );
-        locationService.create(request);
-        return "redirect:/locations";
+    public String create(@Valid @ModelAttribute("locationForm") LocationForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            return "locations/form";
+        }
+
+        try {
+            LocationRequest request = new LocationRequest(
+                    form.getCode(),
+                    form.getType(),
+                    form.getWidth(),
+                    form.getHeight(),
+                    form.getDepth(),
+                    form.getMaxWeight(),
+                    form.getCoordX(),
+                    form.getCoordY(),
+                    form.getDescription()
+            );
+            locationService.create(request);
+            return "redirect:/locations";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("locationForm", form);
+            return "locations/form";
+        }
     }
 
     @GetMapping("/edit/{id}")
@@ -79,9 +94,25 @@ public class LocationWebController {
     }
 
     @PostMapping("/edit/{id}")
-    public String update(@PathVariable Long id, @Valid @ModelAttribute("locationForm") LocationForm form) {
-        locationService.updateFromWeb(id, form);
-        return "redirect:/locations";
+    public String update(@PathVariable Long id,
+                         @Valid @ModelAttribute("locationForm") LocationForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("id", id);
+            return "locations/form";
+        }
+
+        try {
+            locationService.updateFromWeb(id, form);
+            return "redirect:/locations";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("locationForm", form);
+            model.addAttribute("id", id);
+            return "locations/form";
+        }
     }
 
     @PostMapping("/deactivate/{id}")

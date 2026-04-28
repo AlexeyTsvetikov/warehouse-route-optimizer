@@ -1,7 +1,7 @@
 -- Миграция V1: Создание таблиц для системы
 
 -- 1. Категории товаров
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description VARCHAR(500),
@@ -13,7 +13,7 @@ CREATE TABLE categories (
 CREATE INDEX idx_categories_active ON categories(is_active);
 
 -- 2. Товары
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id BIGSERIAL PRIMARY KEY,
     sku VARCHAR(100) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
@@ -33,7 +33,7 @@ CREATE INDEX idx_products_sku ON products(sku);
 CREATE INDEX idx_products_category ON products(category_id);
 
 -- 3. Локации
-CREATE TABLE locations (
+CREATE TABLE IF NOT EXISTS locations (
     id BIGSERIAL PRIMARY KEY,
     code VARCHAR(100) NOT NULL UNIQUE,
     type VARCHAR(50) NOT NULL
@@ -56,14 +56,14 @@ CREATE INDEX idx_locations_type ON locations(type);
 CREATE INDEX idx_locations_coords ON locations(x_coord, y_coord);
 
 -- 4. Заказы
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id BIGSERIAL PRIMARY KEY,
     order_number VARCHAR(50) NOT NULL UNIQUE,
     customer_name VARCHAR(100),
     destination_region VARCHAR(100) NOT NULL,
     priority INTEGER NOT NULL DEFAULT 2,
     status VARCHAR(20) NOT NULL DEFAULT 'NEW'
-        CHECK (status IN ('NEW', 'PROCESSING', 'COMPLETED', 'CANCELED')),
+        CHECK (status IN ('NEW', 'PROCESSING', 'COMPLETED', 'CANCELLED')),
     type VARCHAR(20) NOT NULL DEFAULT 'OUTBOUND'
         CHECK (type IN ('INBOUND', 'OUTBOUND')),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -77,7 +77,7 @@ CREATE INDEX idx_orders_type ON orders(type);
 CREATE INDEX idx_orders_departure ON orders(planned_departure);
 
 -- 5. Позиции заказа
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
     id BIGSERIAL PRIMARY KEY,
     order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
@@ -90,7 +90,7 @@ CREATE INDEX idx_order_items_order ON order_items(order_id);
 CREATE INDEX idx_order_items_product ON order_items(product_id);
 
 -- 6. Остатки товаров
-CREATE TABLE stocks (
+CREATE TABLE IF NOT EXISTS stocks (
     id BIGSERIAL PRIMARY KEY,
     product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE RESTRICT,
     location_id BIGINT NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
@@ -106,7 +106,7 @@ CREATE INDEX idx_stock_product ON stocks(product_id);
 CREATE INDEX idx_stock_location ON stocks(location_id);
 
 -- 7. Пользователи
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGSERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
@@ -125,7 +125,7 @@ CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_role ON users(role);
 
 -- 8. Задания на складе
-CREATE TABLE warehouse_tasks (
+CREATE TABLE IF NOT EXISTS warehouse_tasks (
     id BIGSERIAL PRIMARY KEY,
     task_number VARCHAR(50) NOT NULL UNIQUE,
     type VARCHAR(20) NOT NULL

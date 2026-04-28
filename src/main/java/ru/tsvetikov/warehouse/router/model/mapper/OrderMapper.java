@@ -9,6 +9,7 @@ import ru.tsvetikov.warehouse.router.model.dto.response.OrderResponse;
 public interface OrderMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "orderNumber", ignore = true)
     @Mapping(target = "status", constant = "NEW")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "completedAt", ignore = true)

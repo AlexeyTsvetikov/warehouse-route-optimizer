@@ -6,12 +6,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.CategoryForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.CategoryRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.CategoryResponse;
 import ru.tsvetikov.warehouse.router.service.CategoryService;
-
 @Controller
 @RequestMapping("/categories")
 @RequiredArgsConstructor
@@ -43,10 +44,23 @@ public class CategoryWebController {
     }
 
     @PostMapping("/create")
-    public String create(@Valid @ModelAttribute("categoryForm") CategoryForm form) {
-        CategoryRequest request = new CategoryRequest(form.getName(), form.getDescription());
-        categoryService.create(request);
-        return "redirect:/categories";
+    public String create(@Valid @ModelAttribute("categoryForm") CategoryForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            return "categories/form";
+        }
+
+        try {
+            CategoryRequest request = new CategoryRequest(form.getName(), form.getDescription());
+            categoryService.create(request);
+            return "redirect:/categories";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("categoryForm", form);
+            return "categories/form";
+        }
     }
 
     @GetMapping("/edit/{id}")
@@ -61,10 +75,26 @@ public class CategoryWebController {
     }
 
     @PostMapping("/edit/{id}")
-    public String update(@PathVariable Long id, @Valid @ModelAttribute("categoryForm") CategoryForm form) {
-        CategoryRequest request = new CategoryRequest(form.getName(), form.getDescription());
-        categoryService.update(id, request);
-        return "redirect:/categories";
+    public String update(@PathVariable Long id,
+                         @Valid @ModelAttribute("categoryForm") CategoryForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("id", id);
+            return "categories/form";
+        }
+
+        try {
+            CategoryRequest request = new CategoryRequest(form.getName(), form.getDescription());
+            categoryService.update(id, request);
+            return "redirect:/categories";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("categoryForm", form);
+            model.addAttribute("id", id);
+            return "categories/form";
+        }
     }
 
     @PostMapping("/delete/{id}")

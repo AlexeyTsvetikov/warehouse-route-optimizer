@@ -4,6 +4,5 @@ import jakarta.validation.constraints.*;
 
 public record OrderItemRequest(
         @NotBlank String productSku,
-        @NotNull @Positive Integer quantity,
-        @PositiveOrZero Integer collectedQuantity
+        @NotNull @Positive Integer quantity
 ) {}

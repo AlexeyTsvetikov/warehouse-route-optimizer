@@ -6,7 +6,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.ProductForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.ProductRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.CategoryResponse;
@@ -26,7 +28,6 @@ public class ProductWebController {
     private final ProductService productService;
     private final CategoryService categoryService;
     private final StockService stockService;
-
 
     @GetMapping
     public String list(
@@ -67,14 +68,31 @@ public class ProductWebController {
     }
 
     @PostMapping("/create")
-    public String create(@Valid @ModelAttribute("productForm") ProductForm form) {
-        ProductRequest request = new ProductRequest(
-                form.getSku(), form.getName(), form.getDescription(),
-                form.getWeight(), form.getWidth(), form.getHeight(), form.getDepth(),
-                form.getCategoryName()
-        );
-        productService.create(request);
-        return "redirect:/products";
+    public String create(@Valid @ModelAttribute("productForm") ProductForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
+            model.addAttribute("categories", categories.getContent());
+            return "products/form";
+        }
+
+        try {
+            ProductRequest request = new ProductRequest(
+                    form.getSku(), form.getName(), form.getDescription(),
+                    form.getWeight(), form.getWidth(), form.getHeight(), form.getDepth(),
+                    form.getCategoryName()
+            );
+            productService.create(request);
+            return "redirect:/products";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("productForm", form);
+            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
+            model.addAttribute("categories", categories.getContent());
+            return "products/form";
+        }
     }
 
     @GetMapping("/{id}")
@@ -107,14 +125,34 @@ public class ProductWebController {
     }
 
     @PostMapping("/edit/{id}")
-    public String update(@PathVariable Long id, @Valid @ModelAttribute("productForm") ProductForm form) {
-        ProductRequest request = new ProductRequest(
-                form.getSku(), form.getName(), form.getDescription(),
-                form.getWeight(), form.getWidth(), form.getHeight(), form.getDepth(),
-                form.getCategoryName()
-        );
-        productService.update(id, request);
-        return "redirect:/products";
+    public String update(@PathVariable Long id,
+                         @Valid @ModelAttribute("productForm") ProductForm form,
+                         BindingResult result,
+                         Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("id", id);
+            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
+            model.addAttribute("categories", categories.getContent());
+            return "products/form";
+        }
+
+        try {
+            ProductRequest request = new ProductRequest(
+                    form.getSku(), form.getName(), form.getDescription(),
+                    form.getWeight(), form.getWidth(), form.getHeight(), form.getDepth(),
+                    form.getCategoryName()
+            );
+            productService.update(id, request);
+            return "redirect:/products";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("productForm", form);
+            model.addAttribute("id", id);
+            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
+            model.addAttribute("categories", categories.getContent());
+            return "products/form";
+        }
     }
 
     @PostMapping("/delete/{id}")
