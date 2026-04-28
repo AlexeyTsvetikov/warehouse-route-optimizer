@@ -12,10 +12,12 @@
             flex-wrap: nowrap;
             border-bottom: none;
         }
+
         .nav-tabs .nav-item {
             flex: 1;
             text-align: center;
         }
+
         .nav-tabs .nav-link {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -24,18 +26,25 @@
             padding: 10px 0;
             transition: all 0.2s ease;
         }
+
         .nav-tabs .nav-link.active {
             background-color: #6c757d;
             border-color: #6c757d;
             color: white;
         }
+
         .nav-tabs .nav-link:hover:not(.active) {
             background-color: #e9ecef;
             border-color: #adb5bd;
         }
+        .table-equal-cols {
+            width: 100%;
+            table-layout: fixed;
+        }
 
-        .info-label {
-            font-weight: bold;
+        .table-equal-cols th,
+        .table-equal-cols td {
+            width: 50%;
         }
     </style>
 </head>
@@ -64,36 +73,34 @@
 
         <div class="tab-content">
             <div class="tab-pane fade show active" id="main">
-                <div class="info-container">
-                    <div class="row mb-2 info-row">
-                        <div class="col-sm-4 info-label">SKU:</div>
-                        <div class="col-sm-8" th:text="${product.sku}">—</div>
-                    </div>
-                    <div class="row mb-2 info-row">
-                        <div class="col-sm-4 info-label">Название:</div>
-                        <div class="col-sm-8" th:text="${product.name}">—</div>
-                    </div>
-                    <div class="row mb-2 info-row">
-                        <div class="col-sm-4 info-label">Категория:</div>
-                        <div class="col-sm-8" th:text="${product.categoryName}">—</div>
-                    </div>
-                    <div class="row mb-2 info-row">
-                        <div class="col-sm-4 info-label">Описание:</div>
-                        <div class="col-sm-8" th:text="${product.description != null ? product.description : '—'}">—
-                        </div>
-                    </div>
-                    <div class="row mb-2 info-row">
-                        <div class="col-sm-4 info-label">Вес (кг):</div>
-                        <div class="col-sm-8" th:text="${product.weight != null ? product.weight : '—'}">—</div>
-                    </div>
-                    <div class="row mb-3 info-row">
-                        <div class="col-sm-4 info-label">Габариты (Ш×Г×В):</div>
-                        <div class="col-sm-8"
-                             th:text="${product.width != null && product.depth != null && product.height != null ? product.width + '×' + product.depth + '×' + product.height : '—'}">
+                <table class="table table-bordered table-equal-cols">
+                    <tr>
+                        <th>SKU</th>
+                        <td th:text="${product.sku}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Название</th>
+                        <td th:text="${product.name}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Категория</th>
+                        <td th:text="${product.categoryName}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Описание</th>
+                        <td th:text="${product.description != null ? product.description : '—'}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Вес (кг)</th>
+                        <td th:text="${product.weight != null ? product.weight : '—'}">—</td>
+                    </tr>
+                    <tr>
+                        <th>Габариты (Ш×Г×В)</th>
+                        <td th:text="${product.width != null && product.depth != null && product.height != null ? product.width + '×' + product.depth + '×' + product.height : '—'}">
                             —
-                        </div>
-                    </div>
-                </div>
+                        </td>
+                    </tr>
+                </table>
 
                 <div class="d-flex gap-2 mt-3">
                     <a href="/products" class="btn btn-outline-secondary flex-fill">

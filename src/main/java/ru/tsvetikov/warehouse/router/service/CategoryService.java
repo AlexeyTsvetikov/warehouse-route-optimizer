@@ -26,11 +26,13 @@ public class CategoryService {
 
     @Transactional
     public CategoryResponse create(CategoryRequest request) {
-        checkNameUniqueness(request.name());
+        String formattedName = formatName(request.name());
+        checkNameUniqueness(formattedName);
 
         Category category = categoryMapper.toEntity(request);
-        Category savedCategory = categoryRepository.save(category);
+        category.setName(formattedName);
 
+        Category savedCategory = categoryRepository.save(category);
         return categoryMapper.toResponseDto(savedCategory);
     }
 
@@ -60,8 +62,10 @@ public class CategoryService {
     public CategoryResponse update(Long id, CategoryRequest request) {
         Category category = findCategoryOrThrow(id);
 
-        if (!category.getName().equals(request.name())) {
-            checkNameUniqueness(request.name());
+        String formattedName = formatName(request.name());
+        if (!category.getName().equalsIgnoreCase(formattedName)) {
+            checkNameUniqueness(formattedName);
+            category.setName(formattedName);
         }
 
         categoryMapper.updateEntityFromDto(request, category);
@@ -101,8 +105,13 @@ public class CategoryService {
                         String.format("Category with id: %s not found", id), HttpStatus.NOT_FOUND));
     }
 
+    private String formatName(String name) {
+        if (name == null || name.isBlank()) return name;
+        return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
+    }
+
     private void checkNameUniqueness(String name) {
-        if (categoryRepository.existsByName(name)) {
+        if (categoryRepository.existsByNameIgnoreCase(name)) {
             throw new CommonBackendException("Category with name already exists", HttpStatus.CONFLICT);
         }
     }

@@ -12,11 +12,12 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    boolean existsBySku(String sku);
 
     Page<Product> findAllByIsActiveTrue(Pageable pageable);
 
     Optional<Product> findBySku(String sku);
+
+    boolean existsBySkuIgnoreCase(String sku);
 
     Page<Product> findByCategoryIdAndIsActiveTrue(Long categoryId, Pageable pageable);
 

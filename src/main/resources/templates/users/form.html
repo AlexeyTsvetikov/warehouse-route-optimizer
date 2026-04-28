@@ -44,8 +44,13 @@
 
             <div class="mb-3" th:unless="${id != null}">
                 <label class="form-label" for="password"><i class="bi bi-key"></i> Пароль</label>
-                <input type="password" name="password" id="password" class="form-control" required
-                       aria-label="Пароль пользователя">
+                <input type="password" name="password" id="password"
+                       class="form-control"
+                       th:classappend="${#fields.hasErrors('password')} ? 'is-invalid' : ''"
+                       required>
+                <div class="invalid-feedback" th:if="${#fields.hasErrors('password')}">
+                    <span th:each="err : ${#fields.errors('password')}" th:text="${err}"></span>
+                </div>
             </div>
 
             <div class="row">

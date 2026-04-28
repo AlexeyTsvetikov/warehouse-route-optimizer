@@ -35,11 +35,13 @@ public class ProductService {
 
     @Transactional
     public ProductResponse create(ProductRequest request) {
-        checkSkuUniqueness(request.sku());
+        String formattedSku = formatSku(request.sku());
+        checkSkuUniqueness(formattedSku);
 
         Category category = findCategoryByNameOrThrow(request.categoryName());
 
         Product product = productMapper.toEntity(request);
+        product.setSku(formattedSku);
         product.setCategory(category);
 
         Product saved = productRepository.save(product);
@@ -79,8 +81,11 @@ public class ProductService {
         Product product = findProductOrThrow(id);
 
         if (request.sku() != null && !request.sku().equals(product.getSku())) {
-            checkSkuUniqueness(request.sku());
+            String formattedSku = formatSku(request.sku());
+            checkSkuUniqueness(formattedSku);
+            product.setSku(formattedSku);
         }
+
 
         if (request.categoryName() != null && !request.categoryName().equals(product.getCategory().getName())) {
             Category newCategory = findCategoryByNameOrThrow(request.categoryName());
@@ -129,8 +134,13 @@ public class ProductService {
                         String.format("Category with name '%s' not found", categoryName), HttpStatus.NOT_FOUND));
     }
 
+    private String formatSku(String sku) {
+        if (sku == null || sku.isBlank()) return sku;
+        return sku.toUpperCase();
+    }
+
     private void checkSkuUniqueness(String sku) {
-        if (productRepository.existsBySku(sku)) {
+        if (productRepository.existsBySkuIgnoreCase(sku)) {
             throw new CommonBackendException(
                     String.format("Product with SKU '%s' already exists", sku), HttpStatus.CONFLICT);
         }

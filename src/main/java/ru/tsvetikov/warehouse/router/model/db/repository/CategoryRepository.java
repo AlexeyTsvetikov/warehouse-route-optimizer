@@ -12,7 +12,9 @@ import java.util.Optional;
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Page<Category> findAllByIsActiveTrue(Pageable pageRequest);
-    boolean existsByName(String name);
+
+    boolean existsByNameIgnoreCase(String name);
+
     Optional<Category> findByName(String name);
 
     @Query("SELECT c FROM Category c WHERE (LOWER(c.name) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(c.description) " +

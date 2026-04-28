@@ -29,9 +29,11 @@ public class UserService {
 
     @Transactional
     public UserResponse create(UserCreateRequest request) {
-        checkUsernameUniqueness(request.username());
+        String formattedUsername = formatUsername(request.username());
+        checkUsernameUniqueness(formattedUsername);
 
         User user = userMapper.toEntity(request);
+        user.setUsername(formattedUsername);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
 
         User saved = userRepository.save(user);
@@ -72,7 +74,9 @@ public class UserService {
         User user = findUserOrThrow(id);
 
         if (request.username() != null && !request.username().equals(user.getUsername())) {
-            checkUsernameUniqueness(request.username());
+            String formattedUsername = formatUsername(request.username());
+            checkUsernameUniqueness(formattedUsername);
+            user.setUsername(formattedUsername);
         }
 
         userMapper.updateEntityFromDto(request, user);
@@ -130,8 +134,13 @@ public class UserService {
                         String.format("User with id: %s not found", id), HttpStatus.NOT_FOUND));
     }
 
+    private String formatUsername(String username) {
+        if (username == null || username.isBlank()) return username;
+        return username.toLowerCase();
+    }
+
     private void checkUsernameUniqueness(String username) {
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new CommonBackendException(
                     String.format("User with username '%s' already exists", username), HttpStatus.CONFLICT);
         }

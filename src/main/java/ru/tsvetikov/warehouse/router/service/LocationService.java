@@ -33,8 +33,12 @@ public class LocationService {
 
     @Transactional
     public LocationResponse create(LocationRequest request) {
-        checkCodeUniqueness(request.code());
+        String formattedCode = formatCode(request.code());
+        checkCodeUniqueness(formattedCode);
+
         Location location = locationMapper.toEntity(request);
+        location.setCode(formattedCode);
+
         Location saved = locationRepository.save(location);
         return locationMapper.toResponseDto(saved);
     }
@@ -64,8 +68,11 @@ public class LocationService {
     public LocationResponse update(Long id, LocationRequest request) {
         Location location = findLocationOrThrow(id);
 
+
         if (request.code() != null && !request.code().equals(location.getCode())) {
-            checkCodeUniqueness(request.code());
+            String formattedCode = formatCode(request.code());
+            checkCodeUniqueness(formattedCode);
+            location.setCode(formattedCode);
         }
 
         locationMapper.updateEntityFromDto(request, location);
@@ -113,8 +120,13 @@ public class LocationService {
                         String.format("Location with id: %s not found", id), HttpStatus.NOT_FOUND));
     }
 
+    private String formatCode(String code) {
+        if (code == null || code.isBlank()) return code;
+        return code.toUpperCase();
+    }
+
     private void checkCodeUniqueness(String code) {
-        if (locationRepository.existsByCode(code)) {
+        if (locationRepository.existsByCodeIgnoreCase(code)) {
             throw new CommonBackendException(
                     String.format("Location with code already exists: %s", code), HttpStatus.CONFLICT);
         }

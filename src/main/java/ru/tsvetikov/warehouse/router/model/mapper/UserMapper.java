@@ -16,6 +16,7 @@ public interface UserMapper {
     @Mapping(target = "lastKnownX", ignore = true)
     @Mapping(target = "lastKnownY", ignore = true)
     @Mapping(target = "passwordHash", source = "password")
+    @Mapping(target = "username", ignore = true)
     User toEntity(UserCreateRequest userRequest);
 
     UserResponse toResponseDto(User user);
@@ -29,5 +30,6 @@ public interface UserMapper {
     @Mapping(target = "lastKnownX", ignore = true)
     @Mapping(target = "lastKnownY", ignore = true)
     @Mapping(target = "passwordHash", ignore = true)
+    @Mapping(target = "username", ignore = true)
     void updateEntityFromDto(UserUpdateRequest userRequest, @MappingTarget User user);
 }

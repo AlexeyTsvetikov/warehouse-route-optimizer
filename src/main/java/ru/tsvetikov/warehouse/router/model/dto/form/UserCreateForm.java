@@ -17,7 +17,7 @@ public class UserCreateForm {
     private String username;
 
     @NotBlank(message = "Пароль обязателен")
-    @Size(min = 6)
+    @Size(min = 6, message = "Пароль должен быть не менее 6 символов")
     private String password;
 
     @Size(max = 100)

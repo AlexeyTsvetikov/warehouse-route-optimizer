@@ -15,6 +15,7 @@ public interface ProductMapper {
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "stocks", ignore = true)
+    @Mapping(target = "sku", ignore = true)
     Product toEntity(ProductRequest productRequest);
 
     @Mapping(target = "categoryName", source = "category.name")
@@ -28,5 +29,6 @@ public interface ProductMapper {
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "stocks", ignore = true)
+    @Mapping(target = "sku", ignore = true)
     void updateEntityFromDto(ProductRequest productRequest, @MappingTarget Product product);
 }

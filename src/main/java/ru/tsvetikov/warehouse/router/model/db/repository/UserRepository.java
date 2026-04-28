@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    boolean existsByUsername(String username);
+    boolean existsByUsernameIgnoreCase(String username);
 
     Page<User> findAllByIsActiveTrue(Pageable pageable);
 

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.UserEditForm;
 import ru.tsvetikov.warehouse.router.model.dto.form.UserCreateForm;
@@ -17,6 +18,7 @@ import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 import ru.tsvetikov.warehouse.router.model.enums.Role;
 import ru.tsvetikov.warehouse.router.service.UserService;
+
 @Controller
 @RequestMapping("/users")
 @RequiredArgsConstructor
@@ -131,9 +133,21 @@ public class UserWebController {
 
     @PostMapping("/change-password/{id}")
     public String changePassword(@PathVariable Long id,
-                                 @ModelAttribute ChangePasswordRequest request) {
-        userService.changePassword(id, request);
-        return "redirect:/users/edit/" + id;
+                                 @Valid @ModelAttribute ChangePasswordRequest request,
+                                 BindingResult result,
+                                 RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            return "redirect:/users/change-password/" + id;
+        }
+
+        try {
+            userService.changePassword(id, request);
+            return "redirect:/users/edit/" + id;
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/users/change-password/" + id;
+        }
     }
 
     @PostMapping("/delete/{id}")

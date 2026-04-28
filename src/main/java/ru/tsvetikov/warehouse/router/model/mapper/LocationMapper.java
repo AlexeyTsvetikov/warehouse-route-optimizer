@@ -14,6 +14,7 @@ public interface LocationMapper {
     @Mapping(target = "isActive", ignore = true)
     @Mapping(target = "stocks", ignore = true)
     @Mapping(target = "volume", ignore = true)
+    @Mapping(target = "code", ignore = true)
     Location toEntity(LocationRequest request);
 
     LocationResponse toResponseDto(Location location);
@@ -33,5 +34,6 @@ public interface LocationMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "stocks", ignore = true)
     @Mapping(target = "volume", ignore = true)
+    @Mapping(target = "code", ignore = true)
     void updateEntityFromForm(LocationForm form, @MappingTarget Location location);
 }
