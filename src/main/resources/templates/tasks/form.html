@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Форма задачи</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <style>
+        .btn-danger {
+            background-color: #e57373;
+            border-color: #e57373;
+        }
+        .btn-danger:hover {
+            background-color: #d32f2f;
+            border-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card card-custom p-4">
+        <h1 class="text-center mb-4">
+            <i th:if="${id == null}" class="bi bi-plus-circle"></i>
+            <i th:unless="${id == null}" class="bi bi-pencil-square"></i>
+            <span th:text="${id != null} ? 'Редактировать задачу' : 'Создать задачу'">Форма</span>
+        </h1>
+
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        </div>
+
+        <form th:action="@{${id != null ? '/tasks/edit/' + id : '/tasks/create'}}"
+              th:object="${taskForm}" method="post">
+
+            <!-- Тип задачи -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-tag"></i> Тип задачи</label>
+                <select th:field="*{type}" class="form-select" required aria-label="Тип задачи">
+                    <option th:each="t : ${taskTypes}" th:value="${t}" th:text="${t}"></option>
+                </select>
+            </div>
+
+            <!-- Товар (Tom Select) -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-box-seam"></i> Товар</label>
+                <input type="text" id="productSearch" class="form-control"
+                       th:value="${selectedProductText}"
+                       placeholder="Начните вводить SKU или название..."
+                       aria-label="Поиск товара">
+                <input type="hidden" th:field="*{productSku}" id="productSku">
+            </div>
+
+            <!-- Количество -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-123"></i> Количество</label>
+                <input type="number" th:field="*{plannedQuantity}" class="form-control" required min="1"
+                       aria-label="Плановое количество">
+            </div>
+
+            <!-- Локация источник (Tom Select) -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-arrow-right"></i> Откуда (локация)</label>
+                <input type="text" id="sourceLocationSearch" class="form-control"
+                       th:value="${selectedSourceLocationText}"
+                       placeholder="Начните вводить код локации..."
+                       aria-label="Поиск локации источника">
+                <input type="hidden" th:field="*{sourceLocationCode}" id="sourceLocationCode">
+            </div>
+
+            <!-- Локация назначения (Tom Select) -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-arrow-left"></i> Куда (локация)</label>
+                <input type="text" id="targetLocationSearch" class="form-control"
+                       th:value="${selectedTargetLocationText}"
+                       placeholder="Начните вводить код локации..."
+                       aria-label="Поиск локации назначения">
+                <input type="hidden" th:field="*{targetLocationCode}" id="targetLocationCode">
+            </div>
+
+            <!-- Оператор (Tom Select) -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-person"></i> Оператор</label>
+                <input type="text" id="operatorSearch" class="form-control"
+                       th:value="${selectedOperatorText}"
+                       placeholder="Начните вводить логин оператора..."
+                       aria-label="Поиск оператора">
+                <input type="hidden" th:field="*{assignedUsername}" id="assignedUsername">
+            </div>
+
+            <!-- Заказ (Tom Select) -->
+            <div class="mb-3">
+                <label class="form-label"><i class="bi bi-truck"></i> Заказ</label>
+                <input type="text" id="orderSearch" class="form-control"
+                       th:value="${selectedOrderText}"
+                       placeholder="Начните вводить номер заказа..."
+                       aria-label="Поиск заказа">
+                <input type="hidden" th:field="*{orderNumber}" id="orderNumber">
+            </div>
+
+            <div class="d-flex gap-2 mb-3">
+                <button type="submit" class="btn btn-primary flex-fill" aria-label="Сохранить задачу">
+                    <i class="bi bi-check-lg"></i> Сохранить
+                </button>
+                <a href="/tasks" class="btn btn-outline-secondary flex-fill" aria-label="Отмена">
+                    <i class="bi bi-x-lg"></i> Отмена
+                </a>
+            </div>
+        </form>
+
+        <form th:if="${id != null}" th:action="@{/tasks/delete/{id}(id=${id})}" method="post" class="mt-4">
+            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Удалить задачу?')">
+                <i class="bi bi-trash3"></i> Удалить задачу
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function initTomSelect(selector, url, hiddenFieldId, textTemplate = null) {
+        new TomSelect(selector, {
+            load: function(query, callback) {
+                if (!query.length) return callback();
+                fetch(url + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        callback(data.map(item => {
+                            let text = textTemplate ? textTemplate(item) : (item.sku || item.code) + ' - ' + (item.name || item.type);
+                            return {
+                                value: item.sku || item.code || item.username || item.orderNumber,
+                                text: text
+                            };
+                        }));
+                    })
+                    .catch(() => callback());
+            },
+            onChange: function(value) {
+                document.getElementById(hiddenFieldId).value = value;
+            },
+            maxOptions: 20,
+            maxItems: 1,
+            create: false,
+            placeholder: 'Начните вводить...'
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+        initTomSelect('#productSearch', '/api/products/search?query=', 'productSku',
+            (item) => item.sku + ' - ' + item.name);
+
+
+        initTomSelect('#sourceLocationSearch', '/api/locations/search?query=', 'sourceLocationCode',
+            (item) => item.code + ' - ' + item.type);
+
+
+        initTomSelect('#targetLocationSearch', '/api/locations/search?query=', 'targetLocationCode',
+            (item) => item.code + ' - ' + item.type);
+
+
+        initTomSelect('#operatorSearch', '/api/users/search?query=', 'assignedUsername',
+            (item) => item.username);
+
+        // Заказ
+        initTomSelect('#orderSearch', '/api/orders/search?query=', 'orderNumber',
+            /** @param {{orderNumber: string}} item */
+            (item) => item.orderNumber);
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,7 @@ import ru.tsvetikov.warehouse.router.model.db.repository.*;
 import ru.tsvetikov.warehouse.router.model.dto.request.WarehouseTaskRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.WarehouseTaskResponse;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskStatus;
+import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 import ru.tsvetikov.warehouse.router.model.mapper.WarehouseTaskMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
@@ -66,12 +68,12 @@ public class WarehouseTaskService {
         task.setSourceLocation(sourceLocation);
         task.setTargetLocation(targetLocation);
 
-        if (request.assignedUsername() != null) {
+        if (request.assignedUsername() != null && !request.assignedUsername().isBlank()) {
             User user = findUserByUsernameOrThrow(request.assignedUsername());
             task.setAssignedUser(user);
         }
 
-        if (request.orderNumber() != null) {
+        if (request.orderNumber() != null && !request.orderNumber().isBlank()) {
             Order order = findOrderByNumberOrThrow(request.orderNumber());
             task.setOrder(order);
         }
@@ -87,20 +89,31 @@ public class WarehouseTaskService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WarehouseTaskResponse> getAll(List<WarehouseTaskStatus> statuses, Integer page, Integer perPage,
-                                              String sort, Sort.Direction order) {
-        Pageable pageRequest = PaginationUtils.getPageRequest(page, perPage, sort, order);
-
-        if (statuses == null || statuses.isEmpty()) {
-            statuses = Arrays.asList(
-                    WarehouseTaskStatus.CREATED,
-                    WarehouseTaskStatus.ASSIGNED,
-                    WarehouseTaskStatus.IN_PROGRESS,
-                    WarehouseTaskStatus.COMPLETED);
-        }
-
-        Page<WarehouseTask> tasks = warehouseTaskRepository.findByStatusIn(statuses, pageRequest);
+    public Page<WarehouseTaskResponse> getAll(int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<WarehouseTask> tasks = warehouseTaskRepository.findAll(pageable);
         return tasks.map(warehouseTaskMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WarehouseTaskResponse> getByStatus(WarehouseTaskStatus status, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<WarehouseTask> tasks = warehouseTaskRepository.findByStatus(status, pageable);
+        return tasks.map(warehouseTaskMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<WarehouseTaskResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
+        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Page<WarehouseTask> tasks = warehouseTaskRepository.search(query, pageable);
+        return tasks.map(warehouseTaskMapper::toResponseDto);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean areAllTasksCompletedForOrder(String orderNumber, WarehouseTaskType taskType) {
+        return warehouseTaskRepository.findByOrderNumberAndType(orderNumber, taskType)
+                .stream()
+                .allMatch(task -> task.getStatus() == WarehouseTaskStatus.COMPLETED);
     }
 
     @Transactional
@@ -157,9 +170,22 @@ public class WarehouseTaskService {
     public void delete(Long id) {
         WarehouseTask task = findTaskOrThrow(id);
 
-        if (task.getStatus() != WarehouseTaskStatus.CREATED && task.getStatus() != WarehouseTaskStatus.ASSIGNED) {
+        if (task.getStatus() != WarehouseTaskStatus.CREATED &&
+            task.getStatus() != WarehouseTaskStatus.ASSIGNED &&
+            task.getStatus() != WarehouseTaskStatus.IN_PROGRESS) {
             throw new CommonBackendException(
-                    String.format("Cannot cancel task with status: %s", task.getStatus()), HttpStatus.BAD_REQUEST);
+                    String.format("Cannot cancel task with status: %s", task.getStatus()),
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        if (task.getType() == WarehouseTaskType.PICKING) {
+            Integer confirmed = task.getConfirmedQuantity() != null ? task.getConfirmedQuantity() : 0;
+            int reservedQuantity = task.getPlannedQuantity() - confirmed;
+            if (reservedQuantity > 0) {
+                stockService.releaseReserved(task.getProduct().getSku(), reservedQuantity);
+                log.info("Released reserved stock for canceled PICKING task: product {}, quantity {}",
+                        task.getProduct().getSku(), reservedQuantity);
+            }
         }
 
         task.setStatus(WarehouseTaskStatus.CANCELLED);

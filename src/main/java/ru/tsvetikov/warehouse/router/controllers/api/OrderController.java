@@ -64,6 +64,11 @@ public class OrderController {
         return orderService.getAll(page, perPage, sort, order);
     }
 
+    @GetMapping("/search")
+    public List<OrderResponse> search(@RequestParam String query) {
+        return orderService.search(query, 1, 20, "orderNumber", Sort.Direction.ASC).getContent();
+    }
+
     @Operation(summary = "Обновить заказ")
     @PutMapping("/{orderNumber}")
     public OrderResponse update(@PathVariable String orderNumber,

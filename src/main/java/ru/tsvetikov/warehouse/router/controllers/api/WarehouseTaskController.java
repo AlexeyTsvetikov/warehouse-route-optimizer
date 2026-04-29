@@ -39,15 +39,13 @@ public class WarehouseTaskController {
         return warehouseTaskService.getById(id);
     }
 
-    @Operation(summary = "Получить все задания с фильтрацией по статусам")
+    @Operation(summary = "Получить все задания")
     @GetMapping
-    public Page<WarehouseTaskResponse> getAll(
-            @RequestParam(required = false) List<WarehouseTaskStatus> statuses,
-            @RequestParam(defaultValue = "1") @Min(1) Integer page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer perPage,
-            @RequestParam(defaultValue = "createdAt") String sort,
-            @RequestParam(defaultValue = "DESC") Sort.Direction order) {
-        return warehouseTaskService.getAll(statuses, page, perPage, sort, order);
+    public Page<WarehouseTaskResponse> getAll(@RequestParam(defaultValue = "1") @Min(1) Integer page,
+                                              @RequestParam(defaultValue = "10") @Min(1) @Max(100) Integer perPage,
+                                              @RequestParam(defaultValue = "createdAt") String sort,
+                                              @RequestParam(defaultValue = "DESC") Sort.Direction order) {
+        return warehouseTaskService.getAll(page, perPage, sort, order);
     }
 
     @Operation(summary = "Обновить задание")

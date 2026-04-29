@@ -14,6 +14,8 @@ import ru.tsvetikov.warehouse.router.model.dto.request.LocationRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.LocationResponse;
 import ru.tsvetikov.warehouse.router.service.LocationService;
 
+import java.util.List;
+
 @Tag(name = "Locations", description = "Управление ячейками склада")
 @RestController
 @RequestMapping("/api/locations")
@@ -41,6 +43,14 @@ public class LocationController {
                                          @RequestParam(defaultValue = "code") String sort,
                                          @RequestParam(defaultValue = "ASC") Sort.Direction order) {
         return locationService.getAll(page, perPage, sort, order);
+    }
+
+    @Operation(summary = "Поиск ячеек по уникальному коду")
+    @GetMapping("/search")
+    public List<LocationResponse> search(@RequestParam String query,
+                                        @RequestParam(defaultValue = "1") int page,
+                                        @RequestParam(defaultValue = "20") int size) {
+        return locationService.search(query, page, size, "code", Sort.Direction.ASC).getContent();
     }
 
     @Operation(summary = "Обновить ячейку")

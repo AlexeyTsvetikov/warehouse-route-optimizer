@@ -1,8 +1,10 @@
 package ru.tsvetikov.warehouse.router.model.dto.request;
 
 import jakarta.validation.constraints.*;
+import lombok.Builder;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 
+@Builder
 public record WarehouseTaskRequest(
         @NotNull
         WarehouseTaskType type,
@@ -10,9 +12,7 @@ public record WarehouseTaskRequest(
         String productSku,
         @NotNull @Positive
         Integer plannedQuantity,
-        @NotBlank
         String sourceLocationCode,
-        @NotBlank
         String targetLocationCode,
         String assignedUsername,
         String orderNumber,

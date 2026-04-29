@@ -20,6 +20,10 @@ import ru.tsvetikov.warehouse.router.model.enums.Role;
 import ru.tsvetikov.warehouse.router.model.mapper.UserMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -55,12 +59,18 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public List<UserResponse> getAllActiveUsers() {
+        return userRepository.findAllByIsActiveTrue(Sort.by("username")).stream()
+                .map(userMapper::toResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public Page<UserResponse> getByRole(Role role, int page, int size, String sort, Sort.Direction order) {
         Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
         Page<User> users = userRepository.searchActiveByRole(role, pageable);
         return users.map(userMapper::toResponseDto);
     }
-
 
     @Transactional(readOnly = true)
     public Page<UserResponse> search(String query, int page, int size, String sort, Sort.Direction order) {

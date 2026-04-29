@@ -16,6 +16,8 @@ import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 import ru.tsvetikov.warehouse.router.service.UserService;
 
+import java.util.List;
+
 @Tag(name = "Users", description = "Управление пользователями системы")
 @RestController
 @RequestMapping("/api/users")
@@ -57,6 +59,14 @@ public class UserController {
     public void changePassword(@PathVariable Long id,
                                @RequestBody ChangePasswordRequest request) {
         userService.changePassword(id, request);
+    }
+
+    @Operation(summary = "Поиск пользователей по логину")
+    @GetMapping("/search")
+    public List<UserResponse> search(@RequestParam String query,
+                                     @RequestParam(defaultValue = "1") int page,
+                                     @RequestParam(defaultValue = "20") int size) {
+        return userService.search(query, page, size, "username", Sort.Direction.ASC).getContent();
     }
 
     @Operation(summary = "Удалить пользователя")
