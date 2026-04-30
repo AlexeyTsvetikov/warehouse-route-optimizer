@@ -1,6 +1,7 @@
 package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,10 +16,13 @@ import ru.tsvetikov.warehouse.router.model.db.repository.LocationRepository;
 import ru.tsvetikov.warehouse.router.model.dto.form.LocationForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.LocationRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.LocationResponse;
+import ru.tsvetikov.warehouse.router.model.enums.LocationType;
 import ru.tsvetikov.warehouse.router.model.mapper.LocationMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
+import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LocationService {
@@ -103,6 +107,13 @@ public class LocationService {
         locationRepository.save(location);
     }
 
+    @Transactional(readOnly = true)
+    public Location getLocationEntityByLocationCode(String code) {
+        return locationRepository.findByCode(code)
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Location with code '%s' not found", code), HttpStatus.NOT_FOUND));
+    }
+
     @Transactional
     public LocationResponse activate(Long id) {
         Location location = findLocationOrThrow(id);
@@ -112,6 +123,13 @@ public class LocationService {
         }
         location.setIsActive(true);
         return locationMapper.toResponseDto(location);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<String> findFirstReceivingLocationCode() {
+        return locationRepository.findByType(LocationType.RECEIVING).stream()
+                .findFirst()
+                .map(Location::getCode);
     }
 
     private Location findLocationOrThrow(Long id) {

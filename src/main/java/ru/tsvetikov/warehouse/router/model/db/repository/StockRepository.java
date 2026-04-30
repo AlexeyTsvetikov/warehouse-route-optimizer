@@ -43,4 +43,8 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
 
     @Query("SELECT s.location FROM Stock s WHERE s.product.sku = :productSku AND s.quantity > s.reservedQuantity ORDER BY s.inboundDate ASC")
     Optional<Location> findFirstAvailableLocationForProduct(@Param("productSku") String productSku);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT s FROM Stock s WHERE s.product.id = :productId AND s.reservedQuantity > 0 ORDER BY s.inboundDate ASC")
+    List<Stock> findReservedByProductIdFifoWithLock(@Param("productId") Long productId);
 }

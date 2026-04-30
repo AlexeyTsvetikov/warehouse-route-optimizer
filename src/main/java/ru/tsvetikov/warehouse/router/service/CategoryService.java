@@ -58,6 +58,13 @@ public class CategoryService {
         return categories.map(categoryMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public Category getCategoryEntityByCategoryName(String categoryName) {
+        return categoryRepository.findByName(categoryName)
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Category with name '%s' not found", categoryName), HttpStatus.NOT_FOUND));
+    }
+
     @Transactional
     public CategoryResponse update(Long id, CategoryRequest request) {
         Category category = findCategoryOrThrow(id);

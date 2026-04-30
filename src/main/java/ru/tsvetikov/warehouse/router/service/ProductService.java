@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.Category;
 import ru.tsvetikov.warehouse.router.model.db.entity.Product;
-import ru.tsvetikov.warehouse.router.model.db.repository.CategoryRepository;
 import ru.tsvetikov.warehouse.router.model.db.repository.ProductRepository;
 import ru.tsvetikov.warehouse.router.model.dto.request.ProductRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.ProductResponse;
@@ -24,8 +23,8 @@ import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 @RequiredArgsConstructor
 public class ProductService {
     private final ProductRepository productRepository;
-    private final CategoryRepository categoryRepository;
     private final ProductMapper productMapper;
+    private final CategoryService categoryService;
 
     @Cacheable(value = "products", key = "#sku")
     public Product getBySku(String sku) {
@@ -76,6 +75,13 @@ public class ProductService {
                 .map(productMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public Product getProductEntityBySku(String sku) {
+        return productRepository.findBySku(sku)
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
+    }
+
     @Transactional
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = findProductOrThrow(id);
@@ -121,7 +127,6 @@ public class ProductService {
         return productMapper.toResponseDto(product);
     }
 
-
     private Product findProductOrThrow(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new CommonBackendException(
@@ -129,9 +134,7 @@ public class ProductService {
     }
 
     private Category findCategoryByNameOrThrow(String categoryName) {
-        return categoryRepository.findByName(categoryName)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Category with name '%s' not found", categoryName), HttpStatus.NOT_FOUND));
+        return categoryService.getCategoryEntityByCategoryName(categoryName);
     }
 
     private String formatSku(String sku) {

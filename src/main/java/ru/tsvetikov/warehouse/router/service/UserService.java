@@ -79,6 +79,13 @@ public class UserService {
         return users.map(userMapper::toResponseDto);
     }
 
+    @Transactional(readOnly = true)
+    public User getUserEntityByUserName(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("User with username '%s' not found", username), HttpStatus.NOT_FOUND));
+    }
+
     @Transactional
     public UserResponse update(Long id, UserUpdateRequest request) {
         User user = findUserOrThrow(id);

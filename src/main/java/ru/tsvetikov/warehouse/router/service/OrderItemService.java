@@ -15,11 +15,10 @@ import ru.tsvetikov.warehouse.router.model.db.entity.Order;
 import ru.tsvetikov.warehouse.router.model.db.entity.OrderItem;
 import ru.tsvetikov.warehouse.router.model.db.entity.Product;
 import ru.tsvetikov.warehouse.router.model.db.repository.OrderItemRepository;
-import ru.tsvetikov.warehouse.router.model.db.repository.OrderRepository;
-import ru.tsvetikov.warehouse.router.model.db.repository.ProductRepository;
 import ru.tsvetikov.warehouse.router.model.dto.request.OrderItemRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.OrderItemResponse;
 import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
+import ru.tsvetikov.warehouse.router.model.enums.OrderType;
 import ru.tsvetikov.warehouse.router.model.mapper.OrderItemMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
@@ -33,10 +32,10 @@ import java.util.stream.Collectors;
 public class OrderItemService {
     private final OrderItemRepository orderItemRepository;
     private final OrderItemMapper orderItemMapper;
-    private final ProductRepository productRepository;
-    private final OrderRepository orderRepository;
     private final StockService stockService;
+    private final ProductService productService;
     private final ApplicationEventPublisher eventPublisher;
+    private final OrderQueryService orderQueryService;
 
     @Transactional
     public OrderItemResponse create(String orderNumber, OrderItemRequest request) {
@@ -46,9 +45,9 @@ public class OrderItemService {
         Product product = findProductBySkuOrThrow(request.productSku());
         checkProductNotInOrder(order, product);
 
-        stockService.checkAvailability(request.productSku(), request.quantity());
-
-        stockService.reserveStock(request.productSku(), request.quantity());
+        if (order.getType() == OrderType.OUTBOUND) {
+            stockService.checkAvailability(request.productSku(), request.quantity());
+        }
 
         OrderItem item = orderItemMapper.toEntity(request);
         item.setOrder(order);
@@ -88,6 +87,8 @@ public class OrderItemService {
     @Transactional
     public OrderItemResponse update(String orderNumber, Long id, OrderItemRequest request) {
         OrderItem item = findOrderItemOrThrow(id);
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
         validateOrderItemBelongsToOrder(item, orderNumber);
         validateOrderCanBeModified(item.getOrder());
 
@@ -97,29 +98,20 @@ public class OrderItemService {
             Product newProduct = findProductBySkuOrThrow(request.productSku());
             checkProductNotInOrder(item.getOrder(), newProduct);
 
-            stockService.releaseReserved(item.getProduct().getSku(), item.getQuantity());
-            stockService.checkAvailability(request.productSku(), request.quantity());
-            stockService.reserveStock(request.productSku(), request.quantity());
-
+            if (order.getType() == OrderType.OUTBOUND) {
+                stockService.checkAvailability(request.productSku(), request.quantity());
+            }
             item.setProduct(newProduct);
         }
 
         if (request.quantity() != null && !request.quantity().equals(item.getQuantity())) {
-            int oldQty = item.getQuantity();
             int newQty = request.quantity();
 
-            if (newQty > oldQty) {
-                int additional = newQty - oldQty;
-                stockService.checkAvailability(item.getProduct().getSku(), additional);
-                stockService.reserveStock(item.getProduct().getSku(), additional);
-            } else {
-                int toRelease = oldQty - newQty;
-                stockService.releaseReserved(item.getProduct().getSku(), toRelease);
+            if (newQty <= 0) {
+                throw new CommonBackendException("Quantity must be positive", HttpStatus.BAD_REQUEST);
             }
-        }
 
-        if (request.quantity() != null && request.quantity() <= 0) {
-            throw new CommonBackendException("Quantity must be positive", HttpStatus.BAD_REQUEST);
+            stockService.checkAvailability(item.getProduct().getSku(), newQty);
         }
 
         orderItemMapper.updateEntityFromDto(request, item);
@@ -130,12 +122,29 @@ public class OrderItemService {
     @Transactional
     public void delete(String orderNumber, Long id) {
         OrderItem item = findOrderItemOrThrow(id);
+
         validateOrderItemBelongsToOrder(item, orderNumber);
         validateOrderCanBeModified(item.getOrder());
 
-        stockService.releaseReserved(item.getProduct().getSku(), item.getQuantity());
-
         orderItemRepository.delete(item);
+    }
+
+    @Transactional
+    public void addCollectedQuantity(Order order, Product product, int quantityToAdd) {
+        OrderItem orderItem = orderItemRepository.findByOrderAndProduct(order, product)
+                .orElseThrow(() -> new CommonBackendException(
+                        "OrderItem not found for order " + order.getOrderNumber() +
+                        " and product " + product.getSku(), HttpStatus.NOT_FOUND));
+
+        int newCollected = orderItem.getCollectedQuantity() + quantityToAdd;
+        updateCollectedQuantity(order.getOrderNumber(), orderItem.getId(), newCollected);
+    }
+
+    @Transactional(readOnly = true)
+    public int getRemainingQuantity(Order order, Product product) {
+        OrderItem orderItem = orderItemRepository.findByOrderAndProduct(order, product)
+                .orElseThrow(() -> new CommonBackendException("OrderItem not found", HttpStatus.NOT_FOUND));
+        return orderItem.getQuantity() - orderItem.getCollectedQuantity();
     }
 
     @Transactional
@@ -172,15 +181,11 @@ public class OrderItemService {
     }
 
     private Order findOrderByNumberOrThrow(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Order with number '%s' not found", orderNumber), HttpStatus.NOT_FOUND));
+        return orderQueryService.getOrderEntityByNumber(orderNumber);
     }
 
     private Product findProductBySkuOrThrow(String sku) {
-        return productRepository.findBySku(sku)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
+        return productService.getProductEntityBySku(sku);
     }
 
     private void validateOrderCanBeModified(Order order) {

@@ -2,7 +2,7 @@ package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -10,7 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.tsvetikov.warehouse.router.event.OrderItemCompletedEvent;
+import ru.tsvetikov.warehouse.router.event.TaskCompletedEvent;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.*;
 import ru.tsvetikov.warehouse.router.model.db.repository.*;
@@ -31,12 +31,14 @@ import java.util.List;
 public class WarehouseTaskService {
     private final WarehouseTaskRepository warehouseTaskRepository;
     private final WarehouseTaskMapper warehouseTaskMapper;
-    private final ProductRepository productRepository;
-    private final LocationRepository locationRepository;
-    private final UserRepository userRepository;
-    private final OrderRepository orderRepository;
     private final TaskCompletionService taskCompletionService;
     private final StockService stockService;
+    private final ProductService productService;
+    private final LocationService locationService;
+    private final UserService userService;
+    private final OrderQueryService orderQueryService;
+    private final OrderItemService orderItemService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public WarehouseTaskResponse create(WarehouseTaskRequest request) {
@@ -55,8 +57,26 @@ public class WarehouseTaskService {
         }
 
         Product product = findProductBySkuOrThrow(request.productSku());
-        Location sourceLocation = findLocationByCodeOrThrow(request.sourceLocationCode());
-        Location targetLocation = findLocationByCodeOrThrow(request.targetLocationCode());
+
+        Location sourceLocation = null;
+        if (request.sourceLocationCode() != null) {
+            sourceLocation = findLocationByCodeOrThrow(request.sourceLocationCode());
+        }
+
+        Location targetLocation = null;
+        if (request.targetLocationCode() != null) {
+            targetLocation = findLocationByCodeOrThrow(request.targetLocationCode());
+        }
+
+        if (sourceLocation == null && targetLocation == null) {
+            throw new CommonBackendException(
+                    "At least one location (source or target) must be specified",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        if (request.orderNumber() != null && request.type() == WarehouseTaskType.PICKING) {
+            stockService.reserveStock(request.productSku(), request.plannedQuantity());
+        }
 
         WarehouseTask task = new WarehouseTask();
         task.setTaskNumber(taskNumber);
@@ -130,24 +150,53 @@ public class WarehouseTaskService {
                     "Cannot update task that is already assigned to user", HttpStatus.BAD_REQUEST);
         }
 
-        if (request.type() != null) task.setType(request.type());
-        if (request.plannedQuantity() != null) task.setPlannedQuantity(request.plannedQuantity());
-        if (request.confirmedQuantity() != null) task.setConfirmedQuantity(request.confirmedQuantity());
+        if (request.type() != null) {
+            task.setType(request.type());
+        }
 
+        if (request.plannedQuantity() != null) {
+            if (request.plannedQuantity() <= 0) {
+                throw new CommonBackendException("Quantity must be positive", HttpStatus.BAD_REQUEST);
+            }
+            if (task.getOrder() != null && task.getProduct() != null) {
+                int remaining = orderItemService.getRemainingQuantity(task.getOrder(), task.getProduct());
+                if (request.plannedQuantity() > remaining) {
+                    throw new CommonBackendException(
+                            String.format("Cannot exceed remaining order quantity. Remaining: %d", remaining),
+                            HttpStatus.BAD_REQUEST);
+                }
+            }
+            task.setPlannedQuantity(request.plannedQuantity());
+        }
+
+        if (request.confirmedQuantity() != null) {
+            task.setConfirmedQuantity(request.confirmedQuantity());
+        }
 
         if (request.productSku() != null && !request.productSku().equals(task.getProduct().getSku())) {
+            if (task.getOrder() != null) {
+                throw new CommonBackendException(
+                        "Cannot change product for task linked to order. Cancel this task and create a new one.",
+                        HttpStatus.BAD_REQUEST);
+            }
             Product product = findProductBySkuOrThrow(request.productSku());
             task.setProduct(product);
         }
-        if (request.sourceLocationCode() != null && !request.sourceLocationCode().equals(
-                task.getSourceLocation().getCode())) {
-            Location location = findLocationByCodeOrThrow(request.sourceLocationCode());
-            task.setSourceLocation(location);
+
+        if (request.sourceLocationCode() != null && !request.sourceLocationCode().isBlank()) {
+            if (task.getSourceLocation() == null ||
+                !request.sourceLocationCode().equals(task.getSourceLocation().getCode())) {
+                Location location = findLocationByCodeOrThrow(request.sourceLocationCode());
+                task.setSourceLocation(location);
+            }
         }
-        if (request.targetLocationCode() != null && !request.targetLocationCode().equals(
-                task.getTargetLocation().getCode())) {
-            Location location = findLocationByCodeOrThrow(request.targetLocationCode());
-            task.setTargetLocation(location);
+
+        if (request.targetLocationCode() != null && !request.targetLocationCode().isBlank()) {
+            if (task.getTargetLocation() == null ||
+                !request.targetLocationCode().equals(task.getTargetLocation().getCode())) {
+                Location location = findLocationByCodeOrThrow(request.targetLocationCode());
+                task.setTargetLocation(location);
+            }
         }
 
         if (request.orderNumber() != null) {
@@ -159,7 +208,9 @@ public class WarehouseTaskService {
                 Order order = findOrderByNumberOrThrow(request.orderNumber());
                 task.setOrder(order);
             }
-        } else task.setOrder(null);
+        } else {
+            task.setOrder(null);
+        }
 
         task.setUpdatedAt(LocalDateTime.now());
         WarehouseTask updated = warehouseTaskRepository.save(task);
@@ -248,9 +299,15 @@ public class WarehouseTaskService {
         task.setCompletedAt(LocalDateTime.now());
         task.setUpdatedAt(LocalDateTime.now());
 
-        updateStockForTask(task, confirmedQuantity);
+        updateStockForTask(task, finalQuantity);
 
         WarehouseTask saved = warehouseTaskRepository.save(task);
+
+        // Завершаем OrderItem
+        taskCompletionService.finalizeTask(saved.getId(), finalQuantity);
+        eventPublisher.publishEvent(new TaskCompletedEvent(saved));
+
+
         return warehouseTaskMapper.toResponseDto(saved);
     }
 
@@ -274,26 +331,6 @@ public class WarehouseTaskService {
         return tasks.map(warehouseTaskMapper::toResponseDto);
     }
 
-    @EventListener
-    public void onOrderItemCompleted(OrderItemCompletedEvent event) {
-        OrderItem orderItem = event.orderItem();
-        log.info("Received OrderItemCompletedEvent for item {}", orderItem.getId());
-
-        WarehouseTask task = warehouseTaskRepository
-                .findByOrderOrderNumberAndProductSku(orderItem.getOrder().getOrderNumber(),
-                        orderItem.getProduct().getSku())
-                .orElse(null);
-
-        if (task == null) {
-            log.warn("No task found for order {} and product {}",
-                    orderItem.getOrder().getOrderNumber(),
-                    orderItem.getProduct().getSku());
-            return;
-        }
-
-        taskCompletionService.finalizeTask(task.getId(), orderItem.getQuantity());
-    }
-
     private WarehouseTask findTaskOrThrow(Long id) {
         return warehouseTaskRepository.findById(id)
                 .orElseThrow(() -> new CommonBackendException(
@@ -301,27 +338,19 @@ public class WarehouseTaskService {
     }
 
     private Product findProductBySkuOrThrow(String sku) {
-        return productRepository.findBySku(sku)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
+        return productService.getProductEntityBySku(sku);
     }
 
     private Location findLocationByCodeOrThrow(String code) {
-        return locationRepository.findByCode(code)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Location with code '%s' not found", code), HttpStatus.NOT_FOUND));
+        return locationService.getLocationEntityByLocationCode(code);
     }
 
     private User findUserByUsernameOrThrow(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("User with username '%s' not found", username), HttpStatus.NOT_FOUND));
+        return userService.getUserEntityByUserName(username);
     }
 
     private Order findOrderByNumberOrThrow(String orderNumber) {
-        return orderRepository.findByOrderNumber(orderNumber)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Order with number '%s' not found", orderNumber), HttpStatus.NOT_FOUND));
+        return orderQueryService.getOrderEntityByNumber(orderNumber);
     }
 
     private String generateTaskNumber() {
@@ -333,11 +362,8 @@ public class WarehouseTaskService {
         String productSku = task.getProduct().getSku();
 
         switch (task.getType()) {
-            case PICKING -> {
-                stockService.decreaseStock(productSku, task.getSourceLocation().getCode(), confirmedQuantity);
-                log.debug("Stock decreased for PICKING task: {} @ {} -{}",
-                        productSku, task.getSourceLocation().getCode(), confirmedQuantity);
-            }
+            case PICKING ->
+                    stockService.decreaseStock(productSku, task.getSourceLocation().getCode(), confirmedQuantity);
             case MOVEMENT -> {
                 stockService.transferStock(productSku, confirmedQuantity,
                         task.getSourceLocation().getCode(),
