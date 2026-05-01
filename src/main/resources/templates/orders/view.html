@@ -58,6 +58,11 @@
             <i class="bi bi-truck"></i> Заказ <span th:text="${order.orderNumber}"></span>
         </h1>
 
+        <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle"></i> <span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Закрыть"></button>
+        </div>
+
         <ul class="nav nav-tabs mb-3" id="orderTabs">
             <li class="nav-item">
                 <a class="nav-link active" id="main-tab" data-bs-toggle="tab" href="#main" role="tab">Основное</a>
@@ -133,7 +138,8 @@
                          th:if="${order.status.name() != 'CANCELLED' and order.status.name() != 'COMPLETED'}">
                         <form th:action="@{/orders/cancel/{orderNumber}(orderNumber=${order.orderNumber})}"
                               method="post">
-                            <button type="submit" class="btn btn-secondary w-100">
+                            <button type="submit" class="btn btn-secondary w-100"
+                                    onclick="return confirm('Отменить заказ? Все резервы будут сняты.')">
                                 <i class="bi bi-x-lg"></i> Отменить
                             </button>
                         </form>

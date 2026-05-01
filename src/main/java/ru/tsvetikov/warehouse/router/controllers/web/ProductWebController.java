@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.ProductForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.ProductRequest;
@@ -17,6 +18,7 @@ import ru.tsvetikov.warehouse.router.model.dto.response.StockResponse;
 import ru.tsvetikov.warehouse.router.service.CategoryService;
 import ru.tsvetikov.warehouse.router.service.ProductService;
 import ru.tsvetikov.warehouse.router.service.StockService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 import java.util.List;
 
@@ -48,22 +50,19 @@ public class ProductWebController {
             products = productService.getAll(page, size, sort, order);
         }
 
-        Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-
         model.addAttribute("products", products);
-        model.addAttribute("categories", categories.getContent());
         model.addAttribute("selectedCategory", category);
         model.addAttribute("search", search);
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", products.getTotalPages());
+        addCategoriesToModel(model);
         return "products/list";
     }
 
     @GetMapping("/create")
     public String createForm(Model model) {
         model.addAttribute("productForm", new ProductForm());
-        Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-        model.addAttribute("categories", categories.getContent());
+        addCategoriesToModel(model);
         return "products/form";
     }
 
@@ -72,9 +71,8 @@ public class ProductWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
-            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-            model.addAttribute("categories", categories.getContent());
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
+            addCategoriesToModel(model);
             return "products/form";
         }
 
@@ -89,8 +87,7 @@ public class ProductWebController {
         } catch (CommonBackendException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("productForm", form);
-            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-            model.addAttribute("categories", categories.getContent());
+            addCategoriesToModel(model);
             return "products/form";
         }
     }
@@ -119,8 +116,7 @@ public class ProductWebController {
 
         model.addAttribute("productForm", form);
         model.addAttribute("id", id);
-        Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-        model.addAttribute("categories", categories.getContent());
+        addCategoriesToModel(model);
         return "products/form";
     }
 
@@ -130,10 +126,9 @@ public class ProductWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("id", id);
-            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-            model.addAttribute("categories", categories.getContent());
+            addCategoriesToModel(model);
             return "products/form";
         }
 
@@ -149,15 +144,23 @@ public class ProductWebController {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("productForm", form);
             model.addAttribute("id", id);
-            Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
-            model.addAttribute("categories", categories.getContent());
+            addCategoriesToModel(model);
             return "products/form";
         }
     }
 
     @PostMapping("/delete/{id}")
-    public String delete(@PathVariable Long id) {
-        productService.delete(id);
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            productService.delete(id);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/products";
+    }
+
+    private void addCategoriesToModel(Model model) {
+        Page<CategoryResponse> categories = categoryService.getAll(1, 100, "name", Sort.Direction.ASC);
+        model.addAttribute("categories", categories.getContent());
     }
 }

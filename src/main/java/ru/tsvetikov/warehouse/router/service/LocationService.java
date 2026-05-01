@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -29,10 +28,12 @@ public class LocationService {
     private final LocationRepository locationRepository;
     private final LocationMapper locationMapper;
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "locations", key = "#code")
     public Location getByCode(String code) {
         return locationRepository.findByCode(code)
-                .orElseThrow(() -> new CommonBackendException("Location not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Location with code '%s' not found", code), HttpStatus.NOT_FOUND));
     }
 
     @Transactional
@@ -63,9 +64,9 @@ public class LocationService {
 
     @Transactional(readOnly = true)
     public Page<LocationResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
-        Page<Location> categories = locationRepository.searchActive(query, pageable);
-        return categories.map(locationMapper::toResponseDto);
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
+        Page<Location> location = locationRepository.searchActive(query, pageable);
+        return location.map(locationMapper::toResponseDto);
     }
 
     @Transactional
@@ -107,13 +108,6 @@ public class LocationService {
         locationRepository.save(location);
     }
 
-    @Transactional(readOnly = true)
-    public Location getLocationEntityByLocationCode(String code) {
-        return locationRepository.findByCode(code)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Location with code '%s' not found", code), HttpStatus.NOT_FOUND));
-    }
-
     @Transactional
     public LocationResponse activate(Long id) {
         Location location = findLocationOrThrow(id);
@@ -122,10 +116,12 @@ public class LocationService {
             throw new CommonBackendException("Location is already active", HttpStatus.CONFLICT);
         }
         location.setIsActive(true);
+        locationRepository.save(location);
         return locationMapper.toResponseDto(location);
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "locations", key = "'firstReceiving'")
     public Optional<String> findFirstReceivingLocationCode() {
         return locationRepository.findByType(LocationType.RECEIVING).stream()
                 .findFirst()

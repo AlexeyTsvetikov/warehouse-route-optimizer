@@ -18,7 +18,7 @@ public class TaskCompletionService {
     private final WarehouseTaskRepository warehouseTaskRepository;
     private final OrderItemService orderItemService;
 
-    @Transactional  // можно оставить
+    @Transactional
     public void finalizeTask(Long taskId, Integer confirmedQuantity) {
         WarehouseTask task = warehouseTaskRepository.findById(taskId)
                 .orElseThrow(() -> new CommonBackendException(

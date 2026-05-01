@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.OrderForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.OrderRequest;
@@ -17,6 +18,7 @@ import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
 import ru.tsvetikov.warehouse.router.model.enums.OrderType;
 import ru.tsvetikov.warehouse.router.service.OrderItemService;
 import ru.tsvetikov.warehouse.router.service.OrderService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -72,7 +74,7 @@ public class OrderWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("orderTypes", OrderType.values());
             return "orders/form";
         }
@@ -132,7 +134,7 @@ public class OrderWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("orderNumber", orderNumber);
             model.addAttribute("orderTypes", OrderType.values());
             return "orders/form";
@@ -161,27 +163,38 @@ public class OrderWebController {
         }
     }
 
-    @PostMapping("/delete/{orderNumber}")
-    public String delete(@PathVariable String orderNumber) {
-        orderService.delete(orderNumber);
-        return "redirect:/orders";
-    }
-
     @PostMapping("/start/{orderNumber}")
-    public String startProcessing(@PathVariable String orderNumber) {
-        orderService.startProcessing(orderNumber);
+    public String startProcessing(@PathVariable String orderNumber, RedirectAttributes redirectAttributes) {
+        try {
+            orderService.startProcessing(orderNumber);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/orders/" + orderNumber;
     }
 
     @PostMapping("/complete/{orderNumber}")
-    public String complete(@PathVariable String orderNumber) {
-        orderService.completeOrder(orderNumber);
+    public String complete(@PathVariable String orderNumber, RedirectAttributes redirectAttributes) {
+        try {
+            orderService.completeOrder(orderNumber);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/orders/" + orderNumber;
     }
 
     @PostMapping("/cancel/{orderNumber}")
-    public String cancel(@PathVariable String orderNumber) {
-        orderService.cancelOrder(orderNumber);
+    public String cancel(@PathVariable String orderNumber, Model model) {
+        try {
+            orderService.cancelOrder(orderNumber);
+        } catch (CommonBackendException e) {
+            OrderResponse order = orderService.getByNumber(orderNumber);
+            List<OrderItemResponse> items = orderItemService.getByOrderForWeb(orderNumber);
+            model.addAttribute("order", order);
+            model.addAttribute("items", items);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "orders/view";
+        }
         return "redirect:/orders";
     }
 }

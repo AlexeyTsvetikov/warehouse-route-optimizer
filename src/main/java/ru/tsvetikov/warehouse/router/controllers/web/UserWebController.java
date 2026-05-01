@@ -18,6 +18,7 @@ import ru.tsvetikov.warehouse.router.model.dto.request.UserUpdateRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.UserResponse;
 import ru.tsvetikov.warehouse.router.model.enums.Role;
 import ru.tsvetikov.warehouse.router.service.UserService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 @Controller
 @RequestMapping("/users")
@@ -65,7 +66,7 @@ public class UserWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             return "users/form";
         }
 
@@ -104,7 +105,7 @@ public class UserWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("id", id);
             return "users/form";
         }
@@ -135,24 +136,30 @@ public class UserWebController {
     public String changePassword(@PathVariable Long id,
                                  @Valid @ModelAttribute ChangePasswordRequest request,
                                  BindingResult result,
-                                 RedirectAttributes redirectAttributes) {
+                                 Model model) {
         if (result.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
-            return "redirect:/users/change-password/" + id;
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
+            model.addAttribute("userId", id);
+            return "users/change-password";  // ← напрямую, не redirect
         }
 
         try {
             userService.changePassword(id, request);
             return "redirect:/users/edit/" + id;
         } catch (CommonBackendException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-            return "redirect:/users/change-password/" + id;
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("userId", id);
+            return "users/change-password";  // ← напрямую
         }
     }
 
     @PostMapping("/delete/{id}")
-    public String delete(@PathVariable Long id) {
-        userService.delete(id);
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            userService.delete(id);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/users";
     }
 }

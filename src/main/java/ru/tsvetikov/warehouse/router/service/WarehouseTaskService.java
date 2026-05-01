@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -42,29 +41,16 @@ public class WarehouseTaskService {
 
     @Transactional
     public WarehouseTaskResponse create(WarehouseTaskRequest request) {
-        String taskNumber = generateTaskNumber();
-
-        // Защита от коллизий (на случай параллельных запросов)
-        int attempts = 0;
-        while (warehouseTaskRepository.existsByTaskNumber(taskNumber) && attempts < 3) {
-            taskNumber = generateTaskNumber();
-            attempts++;
-        }
-
-        if (warehouseTaskRepository.existsByTaskNumber(taskNumber)) {
-            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
-                    HttpStatus.CONFLICT);
-        }
-
+        String taskNumber = generateUniqueTaskNumber();
         Product product = findProductBySkuOrThrow(request.productSku());
 
         Location sourceLocation = null;
-        if (request.sourceLocationCode() != null) {
+        if (request.sourceLocationCode() != null && !request.sourceLocationCode().isBlank()) {
             sourceLocation = findLocationByCodeOrThrow(request.sourceLocationCode());
         }
 
         Location targetLocation = null;
-        if (request.targetLocationCode() != null) {
+        if (request.targetLocationCode() != null && !request.targetLocationCode().isBlank()) {
             targetLocation = findLocationByCodeOrThrow(request.targetLocationCode());
         }
 
@@ -91,6 +77,7 @@ public class WarehouseTaskService {
         if (request.assignedUsername() != null && !request.assignedUsername().isBlank()) {
             User user = findUserByUsernameOrThrow(request.assignedUsername());
             task.setAssignedUser(user);
+            task.setStatus(WarehouseTaskStatus.ASSIGNED);
         }
 
         if (request.orderNumber() != null && !request.orderNumber().isBlank()) {
@@ -110,21 +97,21 @@ public class WarehouseTaskService {
 
     @Transactional(readOnly = true)
     public Page<WarehouseTaskResponse> getAll(int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         Page<WarehouseTask> tasks = warehouseTaskRepository.findAll(pageable);
         return tasks.map(warehouseTaskMapper::toResponseDto);
     }
 
     @Transactional(readOnly = true)
     public Page<WarehouseTaskResponse> getByStatus(WarehouseTaskStatus status, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         Page<WarehouseTask> tasks = warehouseTaskRepository.findByStatus(status, pageable);
         return tasks.map(warehouseTaskMapper::toResponseDto);
     }
 
     @Transactional(readOnly = true)
     public Page<WarehouseTaskResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         Page<WarehouseTask> tasks = warehouseTaskRepository.search(query, pageable);
         return tasks.map(warehouseTaskMapper::toResponseDto);
     }
@@ -133,6 +120,7 @@ public class WarehouseTaskService {
     public boolean areAllTasksCompletedForOrder(String orderNumber, WarehouseTaskType taskType) {
         return warehouseTaskRepository.findByOrderNumberAndType(orderNumber, taskType)
                 .stream()
+                .filter(task -> task.getStatus() != WarehouseTaskStatus.CANCELLED)
                 .allMatch(task -> task.getStatus() == WarehouseTaskStatus.COMPLETED);
     }
 
@@ -143,11 +131,6 @@ public class WarehouseTaskService {
         if (task.getStatus() != WarehouseTaskStatus.CREATED) {
             throw new CommonBackendException(
                     String.format("Cannot update task with status: %s", task.getStatus()), HttpStatus.BAD_REQUEST);
-        }
-
-        if (task.getAssignedUser() != null) {
-            throw new CommonBackendException(
-                    "Cannot update task that is already assigned to user", HttpStatus.BAD_REQUEST);
         }
 
         if (request.type() != null) {
@@ -173,7 +156,8 @@ public class WarehouseTaskService {
             task.setConfirmedQuantity(request.confirmedQuantity());
         }
 
-        if (request.productSku() != null && !request.productSku().equals(task.getProduct().getSku())) {
+        if (request.productSku() != null && !request.productSku().isBlank()
+            && !request.productSku().equals(task.getProduct().getSku())) {
             if (task.getOrder() != null) {
                 throw new CommonBackendException(
                         "Cannot change product for task linked to order. Cancel this task and create a new one.",
@@ -199,7 +183,7 @@ public class WarehouseTaskService {
             }
         }
 
-        if (request.orderNumber() != null) {
+        if (request.orderNumber() != null && !request.orderNumber().isBlank()) {
             if (task.getOrder() != null &&
                 !request.orderNumber().equals(task.getOrder().getOrderNumber())) {
                 throw new CommonBackendException("Cannot change order for existing task", HttpStatus.BAD_REQUEST);
@@ -210,6 +194,15 @@ public class WarehouseTaskService {
             }
         } else {
             task.setOrder(null);
+        }
+
+        if (request.assignedUsername() != null && !request.assignedUsername().isBlank()) {
+            User user = findUserByUsernameOrThrow(request.assignedUsername());
+            task.setAssignedUser(user);
+        }
+
+        if (task.getAssignedUser() != null && task.getStatus() == WarehouseTaskStatus.CREATED) {
+            task.setStatus(WarehouseTaskStatus.ASSIGNED);
         }
 
         task.setUpdatedAt(LocalDateTime.now());
@@ -338,11 +331,11 @@ public class WarehouseTaskService {
     }
 
     private Product findProductBySkuOrThrow(String sku) {
-        return productService.getProductEntityBySku(sku);
+        return productService.getBySku(sku);
     }
 
     private Location findLocationByCodeOrThrow(String code) {
-        return locationService.getLocationEntityByLocationCode(code);
+        return locationService.getByCode(code);
     }
 
     private User findUserByUsernameOrThrow(String username) {
@@ -356,6 +349,20 @@ public class WarehouseTaskService {
     private String generateTaskNumber() {
         Long maxId = warehouseTaskRepository.findMaxId().orElse(0L);
         return String.format("TASK-%05d", maxId + 1);
+    }
+
+    private String generateUniqueTaskNumber() {
+        String taskNumber = generateTaskNumber();
+        int attempts = 0;
+        while (warehouseTaskRepository.existsByTaskNumber(taskNumber) && attempts < 3) {
+            taskNumber = generateTaskNumber();
+            attempts++;
+        }
+        if (warehouseTaskRepository.existsByTaskNumber(taskNumber)) {
+            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
+                    HttpStatus.CONFLICT);
+        }
+        return taskNumber;
     }
 
     private void updateStockForTask(WarehouseTask task, Integer confirmedQuantity) {

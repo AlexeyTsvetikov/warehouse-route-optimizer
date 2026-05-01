@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.event.TransactionPhase;
-import org.springframework.transaction.event.TransactionalEventListener;
 import ru.tsvetikov.warehouse.router.event.OrderItemCompletedEvent;
 import ru.tsvetikov.warehouse.router.event.OrderProcessingStartedEvent;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
@@ -18,7 +16,6 @@ import ru.tsvetikov.warehouse.router.model.dto.request.WarehouseTaskRequest;
 import ru.tsvetikov.warehouse.router.model.enums.OrderType;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 import ru.tsvetikov.warehouse.router.service.OrderService;
-import ru.tsvetikov.warehouse.router.service.StockService;
 import ru.tsvetikov.warehouse.router.service.WarehouseTaskManager;
 
 @Slf4j
@@ -29,7 +26,6 @@ public class OrderProcessingListener {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final WarehouseTaskManager warehouseTaskManager;
-    private final StockService stockService;
 
     @EventListener
     public void onOrderProcessingStarted(OrderProcessingStartedEvent event) {
@@ -54,7 +50,6 @@ public class OrderProcessingListener {
                     log.warn("No stock found for product {} when creating PICKING task", product.getSku());
                     continue;
                 }
-                stockService.reserveStock(product.getSku(), orderItem.getQuantity());
 
             } else {
                 targetLocationCode = warehouseTaskManager.findDefaultReceivingLocation();
@@ -73,7 +68,7 @@ public class OrderProcessingListener {
         }
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void onOrderItemCompleted(OrderItemCompletedEvent event) {
         OrderItem orderItem = event.orderItem();
         Order order = orderItem.getOrder();
@@ -86,7 +81,7 @@ public class OrderProcessingListener {
                 orderService.completeOrder(order.getOrderNumber());
                 log.info("Order {} fully completed!", order.getOrderNumber());
             } catch (Exception e) {
-                log.error("Failed to complete order {}: {}", order.getOrderNumber(), e.getMessage());
+                log.warn("Order {} not ready yet: {}", order.getOrderNumber(), e.getMessage());
             }
         }
     }

@@ -8,16 +8,6 @@
     <link rel="stylesheet" href="/css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    <style>
-        .btn-danger {
-            background-color: #e57373;
-            border-color: #e57373;
-        }
-        .btn-danger:hover {
-            background-color: #d32f2f;
-            border-color: #d32f2f;
-        }
-    </style>
 </head>
 <body>
 
@@ -63,22 +53,27 @@
             </div>
 
             <!-- Локация источник (Tom Select) -->
-            <div class="mb-3">
-                <label class="form-label"><i class="bi bi-arrow-right"></i> Откуда (локация)</label>
+            <div class="mb-3" id="sourceLocationGroup">
+                <label class="form-label">
+                    <i class="bi bi-arrow-right"></i> Откуда (локация)
+                    <small class="text-muted">— для PICKING и MOVEMENT</small>
+                </label>
                 <input type="text" id="sourceLocationSearch" class="form-control"
                        th:value="${selectedSourceLocationText}"
-                       placeholder="Начните вводить код локации..."
-                       aria-label="Поиск локации источника">
+                       placeholder="Для RECEIVING оставьте пустым" aria-label="Поиск локации отгрузки">
+
                 <input type="hidden" th:field="*{sourceLocationCode}" id="sourceLocationCode">
             </div>
 
             <!-- Локация назначения (Tom Select) -->
-            <div class="mb-3">
-                <label class="form-label"><i class="bi bi-arrow-left"></i> Куда (локация)</label>
+            <div class="mb-3" id="targetLocationGroup">
+                <label class="form-label">
+                    <i class="bi bi-arrow-left"></i> Куда (локация)
+                    <small class="text-muted">— для RECEIVING и MOVEMENT</small>
+                </label>
                 <input type="text" id="targetLocationSearch" class="form-control"
                        th:value="${selectedTargetLocationText}"
-                       placeholder="Начните вводить код локации..."
-                       aria-label="Поиск локации назначения">
+                       placeholder="Для PICKING оставьте пустым" aria-label="Поиск локации назначения">
                 <input type="hidden" th:field="*{targetLocationCode}" id="targetLocationCode">
             </div>
 
@@ -111,19 +106,13 @@
                 </a>
             </div>
         </form>
-
-        <form th:if="${id != null}" th:action="@{/tasks/delete/{id}(id=${id})}" method="post" class="mt-4">
-            <button type="submit" class="btn btn-danger w-100" onclick="return confirm('Удалить задачу?')">
-                <i class="bi bi-trash3"></i> Удалить задачу
-            </button>
-        </form>
     </div>
 </div>
 
 <script>
     function initTomSelect(selector, url, hiddenFieldId, textTemplate = null) {
         new TomSelect(selector, {
-            load: function(query, callback) {
+            load: function (query, callback) {
                 if (!query.length) return callback();
                 fetch(url + encodeURIComponent(query))
                     .then(response => response.json())
@@ -138,7 +127,7 @@
                     })
                     .catch(() => callback());
             },
-            onChange: function(value) {
+            onChange: function (value) {
                 document.getElementById(hiddenFieldId).value = value;
             },
             maxOptions: 20,

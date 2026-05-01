@@ -7,12 +7,14 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.OrderItemForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.OrderItemRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.OrderItemResponse;
 import ru.tsvetikov.warehouse.router.service.OrderItemService;
 import ru.tsvetikov.warehouse.router.service.ProductService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 @Controller
 @RequestMapping("/orders/{orderNumber}/items")
@@ -38,7 +40,7 @@ public class OrderItemWebController {
         if (result.hasErrors()) {
             model.addAttribute("orderNumber", orderNumber);
             model.addAttribute("products", productService.getAll(1, 1000, "name", Sort.Direction.ASC).getContent());
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             return "orders/items/form";
         }
 
@@ -79,7 +81,7 @@ public class OrderItemWebController {
             model.addAttribute("orderNumber", orderNumber);
             model.addAttribute("id", id);
             model.addAttribute("products", productService.getAll(1, 1000, "name", Sort.Direction.ASC).getContent());
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             return "orders/items/form";
         }
 
@@ -98,8 +100,12 @@ public class OrderItemWebController {
     }
 
     @PostMapping("/delete/{id}")
-    public String delete(@PathVariable String orderNumber, @PathVariable Long id) {
-        orderItemService.delete(orderNumber, id);
+    public String delete(@PathVariable String orderNumber, @PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            orderItemService.delete(orderNumber, id);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return String.format("redirect:/orders/%s#items", orderNumber);
     }
 }

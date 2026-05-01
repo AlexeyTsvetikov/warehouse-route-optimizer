@@ -41,42 +41,18 @@ public class OrderService {
 
     @Transactional
     public OrderResponse createEmptyOrder(OrderRequest request) {
-        String orderNumber = generateOrderNumber();
-
-        int attempts = 0;
-        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
-            orderNumber = generateOrderNumber();
-            attempts++;
-        }
-
-        if (orderRepository.existsByOrderNumber(orderNumber)) {
-            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
-                    HttpStatus.CONFLICT);
-        }
-
+        String orderNumber = generateUniqueOrderNumber();
         Order order = orderMapper.toEntity(request);
         order.setOrderNumber(orderNumber);
         Order saved = orderRepository.save(order);
-
         log.info("Created empty order: {}", saved.getOrderNumber());
         return orderMapper.toResponseDto(saved);
     }
 
+
     @Transactional
     public OrderResponse createOrderWithItems(OrderWithItemsRequest request) {
-        String orderNumber = generateOrderNumber();
-
-        int attempts = 0;
-        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
-            orderNumber = generateOrderNumber();
-            attempts++;
-        }
-
-        if (orderRepository.existsByOrderNumber(orderNumber)) {
-            throw new CommonBackendException("Failed to generate unique task number after 3 attempts",
-                    HttpStatus.CONFLICT);
-        }
-
+        String orderNumber = generateUniqueOrderNumber();
         Order order = orderMapper.toEntity(request.order());
         order.setOrderNumber(orderNumber);
         Order savedOrder = orderRepository.save(order);
@@ -134,11 +110,7 @@ public class OrderService {
     public void delete(String orderNumber) {
         Order order = findOrderByNumberOrThrow(orderNumber);
 
-        if (order.getStatus() != OrderStatus.NEW) {
-            throw new CommonBackendException(
-                    String.format("Cannot delete order with status: %s", order.getStatus()),
-                    HttpStatus.BAD_REQUEST);
-        }
+        validateOrderCanBeUpdated(order);
 
         orderRepository.delete(order);
         log.info("Deleted order: {}", orderNumber);
@@ -174,9 +146,7 @@ public class OrderService {
             throw new CommonBackendException("Can only complete PROCESSING orders", HttpStatus.BAD_REQUEST);
         }
 
-        WarehouseTaskType requiredTaskType = order.getType() == OrderType.INBOUND
-                ? WarehouseTaskType.RECEIVING
-                : WarehouseTaskType.PICKING;
+        WarehouseTaskType requiredTaskType = getRequiredTaskType(order);
 
         boolean allTasksCompleted = warehouseTaskService.areAllTasksCompletedForOrder(orderNumber, requiredTaskType);
 
@@ -233,6 +203,19 @@ public class OrderService {
         return String.format("ORD-%05d", maxId + 1);
     }
 
+    private String generateUniqueOrderNumber() {
+        String orderNumber = generateOrderNumber();
+        int attempts = 0;
+        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
+            orderNumber = generateOrderNumber();
+            attempts++;
+        }
+        if (orderRepository.existsByOrderNumber(orderNumber)) {
+            throw new CommonBackendException("Failed to generate unique order number after 3 attempts", HttpStatus.CONFLICT);
+        }
+        return orderNumber;
+    }
+
     private Order findOrderByNumberOrThrow(String orderNumber) {
         return orderRepository.findByOrderNumber(orderNumber)
                 .orElseThrow(() -> new CommonBackendException(
@@ -250,5 +233,9 @@ public class OrderService {
         for (OrderItemRequest itemRequest : itemRequests) {
             orderItemService.create(order.getOrderNumber(), itemRequest);
         }
+    }
+
+    private WarehouseTaskType getRequiredTaskType(Order order) {
+        return order.getType() == OrderType.INBOUND ? WarehouseTaskType.RECEIVING : WarehouseTaskType.PICKING;
     }
 }

@@ -3,7 +3,6 @@ package ru.tsvetikov.warehouse.router.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -26,10 +25,12 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final CategoryService categoryService;
 
+    @Transactional(readOnly = true)
     @Cacheable(value = "products", key = "#sku")
     public Product getBySku(String sku) {
         return productRepository.findBySku(sku)
-                .orElseThrow(() -> new CommonBackendException("Product not found: " + sku, HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new CommonBackendException(
+                        String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
     }
 
     @Transactional
@@ -63,23 +64,16 @@ public class ProductService {
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> getByCategory(Long categoryId, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         return productRepository.findByCategoryIdAndIsActiveTrue(categoryId, pageable)
                 .map(productMapper::toResponseDto);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         return productRepository.searchActive(query, pageable)
                 .map(productMapper::toResponseDto);
-    }
-
-    @Transactional(readOnly = true)
-    public Product getProductEntityBySku(String sku) {
-        return productRepository.findBySku(sku)
-                .orElseThrow(() -> new CommonBackendException(
-                        String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
     }
 
     @Transactional
@@ -124,6 +118,7 @@ public class ProductService {
         }
 
         product.setIsActive(true);
+        productRepository.save(product);
         return productMapper.toResponseDto(product);
     }
 

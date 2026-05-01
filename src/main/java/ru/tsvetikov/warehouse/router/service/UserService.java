@@ -2,7 +2,6 @@ package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -67,14 +66,14 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public Page<UserResponse> getByRole(Role role, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         Page<User> users = userRepository.searchActiveByRole(role, pageable);
         return users.map(userMapper::toResponseDto);
     }
 
     @Transactional(readOnly = true)
     public Page<UserResponse> search(String query, int page, int size, String sort, Sort.Direction order) {
-        Pageable pageable = PageRequest.of(page - 1, size, Sort.by(order, sort));
+        Pageable pageable = PaginationUtils.getPageRequest(page, size, sort, order);
         Page<User> users = userRepository.searchActive(query, pageable);
         return users.map(userMapper::toResponseDto);
     }
@@ -123,6 +122,7 @@ public class UserService {
         }
 
         user.setIsActive(true);
+        userRepository.save(user);
         return userMapper.toResponseDto(user);
     }
 

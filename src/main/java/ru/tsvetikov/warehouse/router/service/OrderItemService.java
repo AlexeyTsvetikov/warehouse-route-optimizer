@@ -185,7 +185,7 @@ public class OrderItemService {
     }
 
     private Product findProductBySkuOrThrow(String sku) {
-        return productService.getProductEntityBySku(sku);
+        return productService.getBySku(sku);
     }
 
     private void validateOrderCanBeModified(Order order) {

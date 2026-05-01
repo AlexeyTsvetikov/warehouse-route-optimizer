@@ -8,11 +8,13 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.dto.form.LocationForm;
 import ru.tsvetikov.warehouse.router.model.dto.request.LocationRequest;
 import ru.tsvetikov.warehouse.router.model.dto.response.LocationResponse;
 import ru.tsvetikov.warehouse.router.service.LocationService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 @Controller
 @RequestMapping("/locations")
@@ -49,7 +51,7 @@ public class LocationWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             return "locations/form";
         }
 
@@ -99,7 +101,7 @@ public class LocationWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("id", id);
             return "locations/form";
         }
@@ -116,8 +118,12 @@ public class LocationWebController {
     }
 
     @PostMapping("/deactivate/{id}")
-    public String deactivate(@PathVariable Long id) {
-        locationService.delete(id);
+    public String deactivate(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            locationService.delete(id);
+        } catch (CommonBackendException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/locations";
     }
 }

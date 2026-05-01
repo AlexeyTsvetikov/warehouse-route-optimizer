@@ -16,6 +16,7 @@ import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskStatus;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 import ru.tsvetikov.warehouse.router.service.UserService;
 import ru.tsvetikov.warehouse.router.service.WarehouseTaskService;
+import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
 @Controller
 @RequestMapping("/tasks")
@@ -68,7 +69,7 @@ public class WarehouseTaskWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("taskTypes", WarehouseTaskType.values());
             model.addAttribute("users", userService.getAllActiveUsers());
             return "tasks/form";
@@ -93,6 +94,11 @@ public class WarehouseTaskWebController {
             model.addAttribute("taskForm", form);
             model.addAttribute("taskTypes", WarehouseTaskType.values());
             model.addAttribute("users", userService.getAllActiveUsers());
+            model.addAttribute("selectedProductText", form.getProductSku());
+            model.addAttribute("selectedSourceLocationText", form.getSourceLocationCode());
+            model.addAttribute("selectedTargetLocationText", form.getTargetLocationCode());
+            model.addAttribute("selectedOperatorText", form.getAssignedUsername());
+            model.addAttribute("selectedOrderText", form.getOrderNumber());
             return "tasks/form";
         }
     }
@@ -146,7 +152,7 @@ public class WarehouseTaskWebController {
                          BindingResult result,
                          Model model) {
         if (result.hasErrors()) {
-            model.addAttribute("errorMessage", "Пожалуйста, исправьте ошибки в форме");
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("id", id);
             model.addAttribute("taskTypes", WarehouseTaskType.values());
             model.addAttribute("users", userService.getAllActiveUsers());
@@ -173,25 +179,44 @@ public class WarehouseTaskWebController {
             model.addAttribute("id", id);
             model.addAttribute("taskTypes", WarehouseTaskType.values());
             model.addAttribute("users", userService.getAllActiveUsers());
+            model.addAttribute("selectedProductText", form.getProductSku());
+            model.addAttribute("selectedSourceLocationText", form.getSourceLocationCode());
+            model.addAttribute("selectedTargetLocationText", form.getTargetLocationCode());
+            model.addAttribute("selectedOperatorText", form.getAssignedUsername());
+            model.addAttribute("selectedOrderText", form.getOrderNumber());
             return "tasks/form";
         }
     }
 
-    @PostMapping("/delete/{id}")
-    public String delete(@PathVariable Long id) {
-        warehouseTaskService.delete(id);
-        return "redirect:/tasks";
-    }
-
     @PostMapping("/{id}/assign")
-    public String assign(@PathVariable Long id, @RequestParam String username) {
-        warehouseTaskService.assignTask(id, username);
+    public String assign(@PathVariable Long id, @RequestParam String username, Model model) {
+        if (username == null || username.isBlank()) {
+            WarehouseTaskResponse task = warehouseTaskService.getById(id);
+            model.addAttribute("task", task);
+            model.addAttribute("errorMessage", "Не выбран оператор. Выберите оператора из списка.");
+            return "tasks/view";
+        }
+        try {
+            warehouseTaskService.assignTask(id, username);
+        } catch (CommonBackendException e) {
+            WarehouseTaskResponse task = warehouseTaskService.getById(id);
+            model.addAttribute("task", task);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "tasks/view";
+        }
         return "redirect:/tasks/" + id;
     }
 
     @PostMapping("/{id}/start")
-    public String start(@PathVariable Long id) {
-        warehouseTaskService.startTask(id);
+    public String start(@PathVariable Long id, Model model) {
+        try {
+            warehouseTaskService.startTask(id);
+        } catch (CommonBackendException e) {
+            WarehouseTaskResponse task = warehouseTaskService.getById(id);
+            model.addAttribute("task", task);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "tasks/view";
+        }
         return "redirect:/tasks/" + id;
     }
 
