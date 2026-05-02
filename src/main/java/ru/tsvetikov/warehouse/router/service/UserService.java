@@ -5,6 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -127,15 +129,17 @@ public class UserService {
     }
 
     @Transactional
+    public void changePasswordForCurrentUser(ChangePasswordRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        User user = userRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new CommonBackendException("User not found", HttpStatus.NOT_FOUND));
+        applyNewPassword(user, request);
+    }
+
+    @Transactional
     public void changePassword(Long userId, ChangePasswordRequest request) {
         User user = findUserOrThrow(userId);
-
-        if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
-            throw new CommonBackendException("Старый пароль неверен", HttpStatus.CONFLICT);
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
+        applyNewPassword(user, request);
     }
 
     @Transactional
@@ -149,6 +153,14 @@ public class UserService {
         return userRepository.findById(id)
                 .orElseThrow(() -> new CommonBackendException(
                         String.format("User with id: %s not found", id), HttpStatus.NOT_FOUND));
+    }
+
+    private void applyNewPassword(User user, ChangePasswordRequest request) {
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPasswordHash())) {
+            throw new CommonBackendException("Старый пароль неверен", HttpStatus.CONFLICT);
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     private String formatUsername(String username) {

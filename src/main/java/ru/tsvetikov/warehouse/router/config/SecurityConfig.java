@@ -22,7 +22,7 @@ public class SecurityConfig {
                         // Страница логина
                         .requestMatchers("/login").permitAll()
 
-                        .requestMatchers("/users/change-password/**").authenticated()
+                        .requestMatchers("/change-password").authenticated()
 
                         // Пользователи — только ADMIN
                         .requestMatchers("/users/**").hasRole("ADMIN")

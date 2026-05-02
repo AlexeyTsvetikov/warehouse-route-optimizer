@@ -126,30 +126,54 @@ public class UserWebController {
         }
     }
 
+    @GetMapping("/change-password")
+    public String showChangePasswordFormForSelf() {
+        return "users/change-password";
+    }
+
+
+    @PostMapping("/change-password")
+    public String changePasswordForSelf(@Valid @ModelAttribute ChangePasswordRequest request,
+                                        BindingResult result,
+                                        Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
+            return "users/change-password";
+        }
+        try {
+            userService.changePasswordForCurrentUser(request);
+            return "redirect:/dashboard";
+        } catch (CommonBackendException e) {
+            model.addAttribute("errorMessage", e.getMessage());
+            return "users/change-password";
+        }
+    }
+
+
     @GetMapping("/change-password/{id}")
-    public String showChangePasswordForm(@PathVariable Long id, Model model) {
+    public String showChangePasswordFormForUser(@PathVariable Long id, Model model) {
         model.addAttribute("userId", id);
         return "users/change-password";
     }
 
+
     @PostMapping("/change-password/{id}")
-    public String changePassword(@PathVariable Long id,
-                                 @Valid @ModelAttribute ChangePasswordRequest request,
-                                 BindingResult result,
-                                 Model model) {
+    public String changePasswordForUser(@PathVariable Long id,
+                                        @Valid @ModelAttribute ChangePasswordRequest request,
+                                        BindingResult result,
+                                        Model model) {
         if (result.hasErrors()) {
             model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
             model.addAttribute("userId", id);
-            return "users/change-password";  // ← напрямую, не redirect
+            return "users/change-password";
         }
-
         try {
             userService.changePassword(id, request);
             return "redirect:/users/edit/" + id;
         } catch (CommonBackendException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("userId", id);
-            return "users/change-password";  // ← напрямую
+            return "users/change-password";
         }
     }
 
