@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Форма товара</title>
@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-5" style="max-width: 700px;">
     <div class="card card-custom p-4">
         <h1 class="text-center mb-4">
@@ -97,7 +97,8 @@
             </div>
         </form>
 
-        <form th:if="${id != null}" th:action="@{/products/delete/{id}(id=${id})}" method="post" class="mt-4"
+        <form sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
+              th:if="${id != null}" th:action="@{/products/delete/{id}(id=${id})}" method="post" class="mt-4"
               onsubmit="return confirm('Вы уверены, что хотите удалить товар? Это действие нельзя будет отменить.');">
             <button type="submit" class="btn btn-danger w-100">
                 <i class="bi bi-trash3"></i> Удалить товар

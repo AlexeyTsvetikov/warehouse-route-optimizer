@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Карточка заказа</title>
@@ -50,7 +50,7 @@
     </style>
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-5">
     <div class="card card-custom p-4">
 
@@ -108,7 +108,7 @@
                 </table>
 
                 <!-- Кнопки действий (только на вкладке Основное) -->
-                <div class="d-flex gap-2 mt-4">
+                <div class="d-flex gap-2 mt-4" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                     <div class="flex-fill" th:if="${order.status.name() == 'NEW'}">
                         <form th:action="@{/orders/start/{orderNumber}(orderNumber=${order.orderNumber})}"
                               method="post">
@@ -118,14 +118,14 @@
                         </form>
                     </div>
 
-                    <div class="flex-fill" th:if="${order.status.name() == 'NEW'}">
+                    <div class="flex-fill" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')" th:if="${order.status.name() == 'NEW'}">
                         <a th:href="@{/orders/edit/{orderNumber}(orderNumber=${order.orderNumber})}"
                            class="btn btn-secondary w-100">
                             <i class="bi bi-pencil-square"></i> Редактировать
                         </a>
                     </div>
 
-                    <div class="flex-fill" th:if="${order.status.name() == 'PROCESSING'}">
+                    <div class="flex-fill" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')" th:if="${order.status.name() == 'PROCESSING'}">
                         <form th:action="@{/orders/complete/{orderNumber}(orderNumber=${order.orderNumber})}"
                               method="post">
                             <button type="submit" class="btn btn-secondary w-100">
@@ -134,7 +134,7 @@
                         </form>
                     </div>
 
-                    <div class="flex-fill"
+                    <div class="flex-fill" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
                          th:if="${order.status.name() != 'CANCELLED' and order.status.name() != 'COMPLETED'}">
                         <form th:action="@{/orders/cancel/{orderNumber}(orderNumber=${order.orderNumber})}"
                               method="post">
@@ -156,7 +156,7 @@
             <!-- Вкладка Позиции -->
             <div class="tab-pane fade" id="items">
                 <!-- Кнопка добавления (только для статуса NEW) -->
-                <div th:if="${order.status.name() == 'NEW'}" class="row g-2 mb-3">
+                <div th:if="${order.status.name() == 'NEW'}" class="row g-2 mb-3" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                     <div class="col-12 col-md-auto ms-auto">
                         <a th:href="@{/orders/{orderNumber}/items/create(orderNumber=${order.orderNumber})}"
                            class="btn btn-success w-100">
@@ -177,7 +177,9 @@
                         </tr>
                         </thead>
                         <tbody>
+                        <!-- ADMIN/MANAGER: строки кликабельны для NEW заказов -->
                         <tr th:each="item : ${items}"
+                            sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
                             th:if="${order.status.name() == 'NEW'}"
                             th:data-url="@{/orders/{orderNumber}/items/edit/{id}(orderNumber=${order.orderNumber}, id=${item.id})}"
                             onclick="window.location.href=this.getAttribute('data-url')"
@@ -187,6 +189,16 @@
                             <td th:text="${item.quantity}">0</td>
                             <td th:text="${item.collectedQuantity}">0</td>
                         </tr>
+                        <!-- Остальные: просто просмотр (для NEW) -->
+                        <tr th:each="item : ${items}"
+                            sec:authorize="!hasAnyRole('ADMIN', 'MANAGER')"
+                            th:if="${order.status.name() == 'NEW'}">
+                            <td class="fw-bold" th:text="${item.productSku}">—</td>
+                            <td th:text="${item.productName}">—</td>
+                            <td th:text="${item.quantity}">0</td>
+                            <td th:text="${item.collectedQuantity}">0</td>
+                        </tr>
+                        <!-- Завершённые/обработанные заказы — просто просмотр для всех -->
                         <tr th:each="item : ${items}" th:unless="${order.status.name() == 'NEW'}">
                             <td class="fw-bold" th:text="${item.productSku}">—</td>
                             <td th:text="${item.productName}">—</td>

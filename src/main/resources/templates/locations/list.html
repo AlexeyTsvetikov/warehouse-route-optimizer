@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Локации</title>
@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-5">
     <div class="card card-custom p-4">
 
@@ -36,7 +36,7 @@
                     </a>
                 </form>
             </div>
-            <div class="col-12 col-md-auto">
+            <div class="col-12 col-md-auto" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                 <a href="/locations/create" class="btn btn-success w-100">
                     <i class="bi bi-plus-lg"></i> Добавить
                 </a>
@@ -56,11 +56,21 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="loc : ${locations}" th:onclick="|window.location='/locations/edit/' + ${loc.id}|"
+                <!-- ADMIN/MANAGER: строки кликабельны -->
+                <tr th:each="loc : ${locations}"
+                    sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
+                    th:onclick="|window.location='/locations/edit/' + ${loc.id}|"
                     style="cursor: pointer;">
-                    <td class="fw-bold">
-                        <span th:text="${loc.code}"></span>
-                    </td>
+                    <td class="fw-bold" th:text="${loc.code}"></td>
+                    <td th:text="${loc.type}"></td>
+                    <td th:text="${loc.width != null && loc.depth != null && loc.height != null ? loc.width + '×' + loc.depth + '×' + loc.height : '—'}"></td>
+                    <td th:text="${loc.maxWeight != null ? loc.maxWeight + ' кг' : '—'}"></td>
+                    <td th:text="${loc.isActive} ? 'Используется' : 'Не используется'"></td>
+                </tr>
+                <!-- Остальные: просто просмотр -->
+                <tr th:each="loc : ${locations}"
+                    sec:authorize="!hasAnyRole('ADMIN', 'MANAGER')">
+                    <td class="fw-bold" th:text="${loc.code}"></td>
                     <td th:text="${loc.type}"></td>
                     <td th:text="${loc.width != null && loc.depth != null && loc.height != null ? loc.width + '×' + loc.depth + '×' + loc.height : '—'}"></td>
                     <td th:text="${loc.maxWeight != null ? loc.maxWeight + ' кг' : '—'}"></td>

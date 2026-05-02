@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Карточка товара</title>
@@ -49,7 +49,7 @@
     </style>
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-4">
     <div class="card card-custom p-4">
 
@@ -106,7 +106,8 @@
                     <a href="/products" class="btn btn-outline-secondary flex-fill">
                         <i class="bi bi-arrow-left"></i> Назад
                     </a>
-                    <a th:href="@{/products/edit/{id}(id=${product.id})}" class="btn btn-outline-secondary flex-fill">
+                    <a sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
+                       th:href="@{/products/edit/{id}(id=${product.id})}" class="btn btn-outline-secondary flex-fill">
                         <i class="bi bi-pencil-square"></i> Редактировать
                     </a>
                 </div>

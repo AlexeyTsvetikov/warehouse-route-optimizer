@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Задачи на складе</title>
@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-5">
     <div class="card card-custom p-4">
 
@@ -48,7 +48,7 @@
                 </form>
             </div>
 
-            <div class="col-12 col-md-auto">
+            <div class="col-12 col-md-auto" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                 <a href="/tasks/create" class="btn btn-success w-100">
                     <i class="bi bi-plus-lg"></i> Добавить
                 </a>

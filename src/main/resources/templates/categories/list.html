@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Категории</title>
@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-
+<div th:replace="~{fragments/header :: navbar}"></div>
 <div class="container mt-5">
     <div class="card card-custom p-4">
 
@@ -37,7 +37,7 @@
                     </a>
                 </form>
             </div>
-            <div class="col-12 col-md-auto">
+            <div class="col-12 col-md-auto" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                 <a href="/categories/create" class="btn btn-success w-100">
                     <i class="bi bi-plus-lg"></i> Добавить
                 </a>
@@ -54,14 +54,17 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="cat : ${categories}" th:onclick="|window.location='/categories/edit/' + ${cat.id}|" style="cursor: pointer;">
+                <tr th:each="cat : ${categories}"
+                    sec:authorize="hasAnyRole('ADMIN', 'MANAGER')"
+                    th:onclick="|window.location='/categories/edit/' + ${cat.id}|"
+                    style="cursor: pointer;">
                     <td class="fw-bold" th:text="${cat.name}"></td>
                     <td th:text="${cat.description}"></td>
                 </tr>
-                <tr th:if="${categories.isEmpty()}">
-                    <td colspan="2" class="text-center text-muted py-4">
-                        <i class="bi bi-inbox"></i> Ничего не найдено
-                    </td>
+                <tr th:each="cat : ${categories}"
+                    sec:authorize="!hasAnyRole('ADMIN', 'MANAGER')">
+                    <td class="fw-bold" th:text="${cat.name}"></td>
+                    <td th:text="${cat.description}"></td>
                 </tr>
                 </tbody>
             </table>
