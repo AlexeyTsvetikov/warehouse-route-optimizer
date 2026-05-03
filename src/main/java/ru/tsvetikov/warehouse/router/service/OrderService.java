@@ -139,6 +139,34 @@ public class OrderService {
     }
 
     @Transactional
+    public OrderResponse completeInboundOrder(String orderNumber) {
+        Order order = findOrderByNumberOrThrow(orderNumber);
+
+        if (order.getStatus() != OrderStatus.PROCESSING) {
+            throw new CommonBackendException("Can only complete PROCESSING orders", HttpStatus.BAD_REQUEST);
+        }
+
+        if (order.getType() != OrderType.INBOUND) {
+            throw new CommonBackendException("This method is only for INBOUND orders", HttpStatus.BAD_REQUEST);
+        }
+
+        for (OrderItem item : order.getOrderItems()) {
+            if (!item.isFullyCollected()) {
+                log.warn("Order {} item {} has shortage: ordered {}, received {}",
+                        orderNumber, item.getProduct().getSku(),
+                        item.getQuantity(), item.getCollectedQuantity());
+            }
+        }
+
+        order.setStatus(OrderStatus.COMPLETED);
+        order.setCompletedAt(Instant.now());
+        Order updated = orderRepository.save(order);
+
+        log.info("Completed inbound order (possibly partial): {}", orderNumber);
+        return orderMapper.toResponseDto(updated);
+    }
+
+    @Transactional
     public OrderResponse completeOrder(String orderNumber) {
         Order order = findOrderByNumberOrThrow(orderNumber);
 
@@ -161,6 +189,11 @@ public class OrderService {
                 log.warn("Order {} item {} has shortage: ordered {}, collected {}",
                         orderNumber, item.getProduct().getSku(),
                         item.getQuantity(), item.getCollectedQuantity());
+            }
+
+            int reservedQuantity = item.getQuantity() - item.getCollectedQuantity();
+            if (reservedQuantity > 0) {
+                stockService.releaseReserved(item.getProduct().getSku(), reservedQuantity);
             }
         }
 

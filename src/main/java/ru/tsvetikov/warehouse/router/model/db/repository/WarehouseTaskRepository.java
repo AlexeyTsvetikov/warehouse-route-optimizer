@@ -23,7 +23,7 @@ public interface WarehouseTaskRepository extends JpaRepository<WarehouseTask, Lo
     Page<WarehouseTask> findByAssignedUserIdAndStatusIn(Long assignedUserId, List<WarehouseTaskStatus> statuses,
                                                         Pageable pageable);
 
-    Optional<WarehouseTask> findByOrderOrderNumberAndProductSku(String orderNumber, String productSku);
+    boolean existsByOrderOrderNumberAndProductSku(String orderNumber, String productSku);
 
     @Query("SELECT t FROM WarehouseTask t " +
            "LEFT JOIN t.product p " +

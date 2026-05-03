@@ -95,6 +95,12 @@ public class OrderController {
         return orderService.completeOrder(orderNumber);
     }
 
+    @Operation(summary = "Завершить заказ приёмки")
+    @PostMapping("/{orderNumber}/complete-inbound")
+    public OrderResponse completeInboundOrder(@PathVariable String orderNumber) {
+        return orderService.completeInboundOrder(orderNumber);
+    }
+
     @Operation(summary = "Отменить заказ")
     @PatchMapping("/{orderNumber}/cancel")
     public OrderResponse cancel(@PathVariable String orderNumber) {

@@ -174,11 +174,18 @@ public class OrderWebController {
     }
 
     @PostMapping("/complete/{orderNumber}")
-    public String complete(@PathVariable String orderNumber, RedirectAttributes redirectAttributes) {
+    public String complete(@PathVariable String orderNumber, Model model) {
         try {
-            orderService.completeOrder(orderNumber);
+            OrderResponse order = orderService.getByNumber(orderNumber);
+            if (order.type() == OrderType.INBOUND) {
+                orderService.completeInboundOrder(orderNumber);
+            } else {
+                orderService.completeOrder(orderNumber);
+            }
         } catch (CommonBackendException e) {
-            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            addOrderToModel(orderNumber, model);
+            model.addAttribute("errorMessage", e.getMessage());
+            return "orders/view";
         }
         return "redirect:/orders/" + orderNumber;
     }
@@ -188,13 +195,17 @@ public class OrderWebController {
         try {
             orderService.cancelOrder(orderNumber);
         } catch (CommonBackendException e) {
-            OrderResponse order = orderService.getByNumber(orderNumber);
-            List<OrderItemResponse> items = orderItemService.getByOrderForWeb(orderNumber);
-            model.addAttribute("order", order);
-            model.addAttribute("items", items);
+            addOrderToModel(orderNumber, model);
             model.addAttribute("errorMessage", e.getMessage());
             return "orders/view";
         }
         return "redirect:/orders";
+    }
+
+    private void addOrderToModel(String orderNumber, Model model) {
+        OrderResponse order = orderService.getByNumber(orderNumber);
+        List<OrderItemResponse> items = orderItemService.getByOrderForWeb(orderNumber);
+        model.addAttribute("order", order);
+        model.addAttribute("items", items);
     }
 }

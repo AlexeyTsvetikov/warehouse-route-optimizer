@@ -3,6 +3,8 @@ package ru.tsvetikov.warehouse.router.listener;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 import ru.tsvetikov.warehouse.router.event.TaskCompletedEvent;
@@ -18,6 +20,7 @@ public class TaskCompletionListener {
 
     private final WarehouseTaskManager warehouseTaskManager;
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTaskCompleted(TaskCompletedEvent event) {
         WarehouseTask task = event.task();

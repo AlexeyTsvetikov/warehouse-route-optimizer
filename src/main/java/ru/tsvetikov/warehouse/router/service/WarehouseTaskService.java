@@ -61,7 +61,12 @@ public class WarehouseTaskService {
         }
 
         if (request.orderNumber() != null && request.type() == WarehouseTaskType.PICKING) {
-            stockService.reserveStock(request.productSku(), request.plannedQuantity());
+            boolean alreadyHasTask = warehouseTaskRepository
+                    .existsByOrderOrderNumberAndProductSku(request.orderNumber(), request.productSku());
+
+            if (!alreadyHasTask) {
+                stockService.reserveStock(request.productSku(), request.plannedQuantity());
+            }
         }
 
         WarehouseTask task = new WarehouseTask();
