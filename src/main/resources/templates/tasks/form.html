@@ -27,7 +27,6 @@
         <form th:action="@{${id != null ? '/tasks/edit/' + id : '/tasks/create'}}"
               th:object="${taskForm}" method="post">
 
-            <!-- Тип задачи -->
             <div class="mb-3">
                 <label class="form-label"><i class="bi bi-tag"></i> Тип задачи</label>
                 <select th:field="*{type}" class="form-select" required aria-label="Тип задачи">
@@ -35,7 +34,6 @@
                 </select>
             </div>
 
-            <!-- Товар (Tom Select) -->
             <div class="mb-3">
                 <label class="form-label"><i class="bi bi-box-seam"></i> Товар</label>
                 <input type="text" id="productSearch" class="form-control"
@@ -45,14 +43,12 @@
                 <input type="hidden" th:field="*{productSku}" id="productSku">
             </div>
 
-            <!-- Количество -->
             <div class="mb-3">
                 <label class="form-label"><i class="bi bi-123"></i> Количество</label>
                 <input type="number" th:field="*{plannedQuantity}" class="form-control" required min="1"
                        aria-label="Плановое количество">
             </div>
 
-            <!-- Локация источник (Tom Select) -->
             <div class="mb-3" id="sourceLocationGroup">
                 <label class="form-label">
                     <i class="bi bi-arrow-right"></i> Откуда (локация)
@@ -65,7 +61,6 @@
                 <input type="hidden" th:field="*{sourceLocationCode}" id="sourceLocationCode">
             </div>
 
-            <!-- Локация назначения (Tom Select) -->
             <div class="mb-3" id="targetLocationGroup">
                 <label class="form-label">
                     <i class="bi bi-arrow-left"></i> Куда (локация)
@@ -77,7 +72,6 @@
                 <input type="hidden" th:field="*{targetLocationCode}" id="targetLocationCode">
             </div>
 
-            <!-- Оператор (Tom Select) -->
             <div class="mb-3">
                 <label class="form-label"><i class="bi bi-person"></i> Оператор</label>
                 <input type="text" id="operatorSearch" class="form-control"
@@ -87,7 +81,6 @@
                 <input type="hidden" th:field="*{assignedUsername}" id="assignedUsername">
             </div>
 
-            <!-- Заказ (Tom Select) -->
             <div class="mb-3">
                 <label class="form-label"><i class="bi bi-truck"></i> Заказ</label>
                 <input type="text" id="orderSearch" class="form-control"

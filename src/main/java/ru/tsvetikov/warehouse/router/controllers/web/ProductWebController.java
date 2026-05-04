@@ -93,11 +93,12 @@ public class ProductWebController {
     }
 
     @GetMapping("/{id}")
-    public String view(@PathVariable Long id, Model model) {
+    public String view(@PathVariable Long id, @RequestParam(required = false) String tsd, Model model) {
         ProductResponse product = productService.getById(id);
         List<StockResponse> stocks = stockService.getByProduct(id);
         model.addAttribute("product", product);
         model.addAttribute("stocks", stocks);
+        model.addAttribute("tsd", "true".equals(tsd));
         return "products/view";
     }
 

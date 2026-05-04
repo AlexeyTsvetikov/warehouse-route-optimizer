@@ -11,12 +11,17 @@ import ru.tsvetikov.warehouse.router.exception.CommonBackendException;
 import ru.tsvetikov.warehouse.router.model.db.entity.Order;
 import ru.tsvetikov.warehouse.router.model.db.entity.OrderItem;
 import ru.tsvetikov.warehouse.router.model.db.entity.Product;
+import ru.tsvetikov.warehouse.router.model.db.entity.Stock;
 import ru.tsvetikov.warehouse.router.model.db.repository.OrderRepository;
 import ru.tsvetikov.warehouse.router.model.dto.request.WarehouseTaskRequest;
 import ru.tsvetikov.warehouse.router.model.enums.OrderType;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 import ru.tsvetikov.warehouse.router.service.OrderService;
+import ru.tsvetikov.warehouse.router.service.StockService;
 import ru.tsvetikov.warehouse.router.service.WarehouseTaskManager;
+
+import java.util.Comparator;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -26,6 +31,7 @@ public class OrderProcessingListener {
     private final OrderRepository orderRepository;
     private final OrderService orderService;
     private final WarehouseTaskManager warehouseTaskManager;
+    private final StockService stockService;
 
     @EventListener
     public void onOrderProcessingStarted(OrderProcessingStartedEvent event) {
@@ -40,31 +46,56 @@ public class OrderProcessingListener {
 
         for (OrderItem orderItem : order.getOrderItems()) {
             Product product = orderItem.getProduct();
-            String sourceLocationCode = null;
-            String targetLocationCode = null;
 
             if (taskType == WarehouseTaskType.PICKING) {
-                sourceLocationCode = warehouseTaskManager.findLocationForProduct(product.getSku());
+                List<Stock> stocks = stockService.findAvailableStocksByProductSku(product.getSku());
 
-                if (sourceLocationCode == null) {
-                    log.warn("No stock found for product {} when creating PICKING task", product.getSku());
+                if (stocks.isEmpty()) {
+                    log.warn("No stock found for product {}", product.getSku());
                     continue;
                 }
 
+                // Сортируем по Манхеттенскому расстоянию от (0,0)
+                stocks.sort(Comparator.comparingDouble(s ->
+                        Math.abs(s.getLocation().getCoordX()) +
+                        Math.abs(s.getLocation().getCoordY())));
+
+                int remaining = orderItem.getQuantity();
+                for (Stock stock : stocks) {
+                    if (remaining <= 0) break;
+
+                    int available = stock.getQuantity() - stock.getReservedQuantity();
+                    int toPick = Math.min(available, remaining);
+
+                    if (toPick > 0) {
+                        WarehouseTaskRequest request = WarehouseTaskRequest.builder()
+                                .type(WarehouseTaskType.PICKING)
+                                .productSku(product.getSku())
+                                .plannedQuantity(toPick)
+                                .sourceLocationCode(stock.getLocation().getCode())
+                                .orderNumber(orderNumber)
+                                .build();
+                        warehouseTaskManager.createSingleTask(request);
+                        remaining -= toPick;
+                    }
+                }
+
+                if (remaining > 0) {
+                    log.warn("Could not fulfill full quantity {} for product {}. Shortage: {}",
+                            orderItem.getQuantity(), product.getSku(), remaining);
+                }
             } else {
-                targetLocationCode = warehouseTaskManager.findDefaultReceivingLocation();
+                // RECEIVING — как раньше
+                String targetLocationCode = warehouseTaskManager.findNearestReceivingLocation(0.0, 0.0);
+                WarehouseTaskRequest request = WarehouseTaskRequest.builder()
+                        .type(taskType)
+                        .productSku(product.getSku())
+                        .plannedQuantity(orderItem.getQuantity())
+                        .targetLocationCode(targetLocationCode)
+                        .orderNumber(orderNumber)
+                        .build();
+                warehouseTaskManager.createSingleTask(request);
             }
-
-            WarehouseTaskRequest request = WarehouseTaskRequest.builder()
-                    .type(taskType)
-                    .productSku(product.getSku())
-                    .plannedQuantity(orderItem.getQuantity())
-                    .sourceLocationCode(sourceLocationCode)
-                    .targetLocationCode(targetLocationCode)
-                    .orderNumber(orderNumber)
-                    .build();
-
-            warehouseTaskManager.createSingleTask(request);
         }
     }
 

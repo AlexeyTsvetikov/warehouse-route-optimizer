@@ -126,25 +126,31 @@ public class UserWebController {
         }
     }
 
-    @GetMapping("/change-password")
-    public String showChangePasswordFormForSelf() {
+    @GetMapping("/change-password/self")
+    public String showChangePasswordFormForSelf(@RequestParam(required = false) String tsd, Model model) {
+        model.addAttribute("tsd", "true".equals(tsd));
         return "users/change-password";
     }
 
-
-    @PostMapping("/change-password")
+    @PostMapping("/change-password/self")
     public String changePasswordForSelf(@Valid @ModelAttribute ChangePasswordRequest request,
                                         BindingResult result,
+                                        @RequestParam(required = false) String tsd,
                                         Model model) {
         if (result.hasErrors()) {
             model.addAttribute("errorMessage", "Ошибки в форме: " + ValidationUtils.getValidationErrors(result));
+            model.addAttribute("tsd", "true".equals(tsd));
             return "users/change-password";
         }
         try {
             userService.changePasswordForCurrentUser(request);
+            if ("true".equals(tsd)) {
+                return "redirect:/tsd/tasks";
+            }
             return "redirect:/dashboard";
         } catch (CommonBackendException e) {
             model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("tsd", "true".equals(tsd));
             return "users/change-password";
         }
     }

@@ -54,19 +54,17 @@ public class WarehouseTaskService {
             targetLocation = findLocationByCodeOrThrow(request.targetLocationCode());
         }
 
-        if (sourceLocation == null && targetLocation == null) {
+        if (request.type() == WarehouseTaskType.PICKING && sourceLocation == null) {
             throw new CommonBackendException(
-                    "At least one location (source or target) must be specified",
-                    HttpStatus.BAD_REQUEST);
+                    "Source location is required for PICKING task", HttpStatus.BAD_REQUEST);
         }
-
-        if (request.orderNumber() != null && request.type() == WarehouseTaskType.PICKING) {
-            boolean alreadyHasTask = warehouseTaskRepository
-                    .existsByOrderOrderNumberAndProductSku(request.orderNumber(), request.productSku());
-
-            if (!alreadyHasTask) {
-                stockService.reserveStock(request.productSku(), request.plannedQuantity());
-            }
+        if (request.type() == WarehouseTaskType.RECEIVING && targetLocation == null) {
+            throw new CommonBackendException(
+                    "Target location is required for RECEIVING task", HttpStatus.BAD_REQUEST);
+        }
+        if (request.type() == WarehouseTaskType.MOVEMENT && (sourceLocation == null || targetLocation == null)) {
+            throw new CommonBackendException(
+                    "Both source and target locations are required for MOVEMENT task", HttpStatus.BAD_REQUEST);
         }
 
         WarehouseTask task = new WarehouseTask();
@@ -88,6 +86,10 @@ public class WarehouseTaskService {
         if (request.orderNumber() != null && !request.orderNumber().isBlank()) {
             Order order = findOrderByNumberOrThrow(request.orderNumber());
             task.setOrder(order);
+        }
+
+        if (task.getOrder() != null && task.getType() == WarehouseTaskType.PICKING && !request.skipReserve()) {
+            stockService.reserveStockNearest(task.getProduct().getSku(), task.getPlannedQuantity(), 0.0, 0.0);
         }
 
         WarehouseTask saved = warehouseTaskRepository.save(task);
@@ -208,6 +210,20 @@ public class WarehouseTaskService {
 
         if (task.getAssignedUser() != null && task.getStatus() == WarehouseTaskStatus.CREATED) {
             task.setStatus(WarehouseTaskStatus.ASSIGNED);
+        }
+
+        if (task.getType() == WarehouseTaskType.PICKING && task.getSourceLocation() == null) {
+            throw new CommonBackendException(
+                    "Source location is required for PICKING task", HttpStatus.BAD_REQUEST);
+        }
+        if (task.getType() == WarehouseTaskType.RECEIVING && task.getTargetLocation() == null) {
+            throw new CommonBackendException(
+                    "Target location is required for RECEIVING task", HttpStatus.BAD_REQUEST);
+        }
+        if (task.getType() == WarehouseTaskType.MOVEMENT &&
+            (task.getSourceLocation() == null || task.getTargetLocation() == null)) {
+            throw new CommonBackendException(
+                    "Both source and target locations are required for MOVEMENT task", HttpStatus.BAD_REQUEST);
         }
 
         task.setUpdatedAt(LocalDateTime.now());
@@ -374,22 +390,32 @@ public class WarehouseTaskService {
         String productSku = task.getProduct().getSku();
 
         switch (task.getType()) {
-            case PICKING ->
-                    stockService.decreaseStock(productSku, task.getSourceLocation().getCode(), confirmedQuantity);
+            case PICKING -> {
+                if (task.getSourceLocation() == null) {
+                    throw new CommonBackendException("Source location is required for PICKING task", HttpStatus.BAD_REQUEST);
+                }
+                stockService.decreaseStock(productSku, task.getSourceLocation().getCode(), confirmedQuantity);
+            }
             case MOVEMENT -> {
+                if (task.getSourceLocation() == null || task.getTargetLocation() == null) {
+                    throw new CommonBackendException("Both locations are required for MOVEMENT task", HttpStatus.BAD_REQUEST);
+                }
                 stockService.transferStock(productSku, confirmedQuantity,
-                        task.getSourceLocation().getCode(),
-                        task.getTargetLocation().getCode());
-                log.debug("Stock transferred for MOVEMENT task: {} from {} to {}, quantity {}",
-                        productSku, task.getSourceLocation().getCode(),
-                        task.getTargetLocation().getCode(), confirmedQuantity);
+                        task.getSourceLocation().getCode(), task.getTargetLocation().getCode());
             }
             case RECEIVING -> {
+                if (task.getTargetLocation() == null) {
+                    throw new CommonBackendException("Target location is required for RECEIVING task", HttpStatus.BAD_REQUEST);
+                }
                 stockService.increaseStock(productSku, task.getTargetLocation().getCode(), confirmedQuantity);
-                log.debug("Stock increased for RECEIVING task: {} @ {} +{}",
-                        productSku, task.getTargetLocation().getCode(), confirmedQuantity);
             }
-            default -> log.warn("Unsupported task type for stock update: {}", task.getType());
         }
+    }
+
+    public boolean hasActiveTasksForOrder(String orderNumber) {
+        return warehouseTaskRepository.existsByOrderOrderNumberAndStatusIn(
+                orderNumber,
+                List.of(WarehouseTaskStatus.CREATED, WarehouseTaskStatus.ASSIGNED, WarehouseTaskStatus.IN_PROGRESS)
+        );
     }
 }

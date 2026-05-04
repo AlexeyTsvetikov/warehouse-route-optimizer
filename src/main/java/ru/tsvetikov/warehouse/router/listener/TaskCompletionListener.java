@@ -40,6 +40,7 @@ public class TaskCompletionListener {
                     .plannedQuantity(remaining)
                     .sourceLocationCode(task.getSourceLocation().getCode())
                     .orderNumber(task.getOrder().getOrderNumber())
+                    .skipReserve(true)
                     .build();
 
             warehouseTaskManager.createSingleTask(rePickRequest);

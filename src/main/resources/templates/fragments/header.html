@@ -1,36 +1,35 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
-
 <body>
-<nav th:fragment="navbar" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
-     class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 border-bottom">
-    <div class="container">
-        <a class="navbar-brand fw-bold text-dark" href="/dashboard">
-            <i class="bi bi-box-seam"></i> WMS
+<nav th:fragment="navbar" class="navbar navbar-light bg-white shadow-sm mb-4 border-bottom">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/dashboard" class="btn btn-outline-secondary" title="На главную">
+            <i class="bi bi-house-door"></i>
         </a>
-        <div class="navbar-nav ms-auto">
-            <div class="dropdown">
-                <button class="btn btn-link nav-link dropdown-toggle text-dark" type="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-person-circle text-secondary"></i>
-                    <span sec:authentication="name"></span>
-                    <span class="badge bg-success ms-1" sec:authentication="principal.authorities"></span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li><span class="dropdown-item-text">Учетная запись: <strong sec:authentication="name"></strong></span></li>
-                    <li><span class="dropdown-item-text text-muted small" sec:authentication="principal.authorities"></span></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" th:href="@{/users/change-password}">
-                        <i class="bi bi-key"></i> Сменить пароль</a></li>
-                    <li>
-                        <form th:action="@{/logout}" method="post">
-                            <button type="submit" class="dropdown-item text-danger">
-                                <i class="bi bi-box-arrow-right"></i> Выйти
-                            </button>
-                        </form>
-                    </li>
-                </ul>
-            </div>
+        <span class="fw-bold text-dark" style="font-size: 1.5rem; margin-left: 60px;">
+            <i class="bi bi-boxes"></i> WMS
+        </span>
+        <div class="dropdown">
+            <button class="btn btn-link text-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i> <span sec:authentication="name"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li><span class="dropdown-item-text"><span sec:authentication="name"></span></span></li>
+                <li><span class="dropdown-item-text text-muted small" sec:authentication="principal.authorities"></span>
+                </li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" th:href="@{/users/change-password/self}">
+                    <i class="bi bi-key"></i> Сменить пароль</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post">
+                        <button type="submit" class="dropdown-item text-danger">
+                            <i class="bi bi-box-arrow-right"></i> Выйти
+                        </button>
+                    </form>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>

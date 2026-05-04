@@ -17,34 +17,43 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(auth -> auth
-                        // Статика доступна всем
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
-                        // Страница логина
-                        .requestMatchers("/login").permitAll()
-
-                        .requestMatchers("/change-password").authenticated()
-
-                        // Пользователи — только ADMIN
+                        .requestMatchers("/login", "/tsd/login").permitAll()
+                        .requestMatchers("/redirect-after-login").authenticated()
+                        .requestMatchers("/users/change-password/self").authenticated()
                         .requestMatchers("/users/**").hasRole("ADMIN")
-
-                        // Справочники и заказы — просмотр для всех, управление для ADMIN/MANAGER
+                        .requestMatchers("/tsd/**").hasAnyRole("ADMIN", "MANAGER", "OPERATOR", "PICKER", "DRIVER")
                         .requestMatchers("/categories/**", "/locations/**", "/products/**",
                                 "/orders/**", "/stocks/**", "/tasks/**", "/dashboard")
                         .hasAnyRole("ADMIN", "MANAGER", "OPERATOR", "PICKER", "DRIVER")
-
-                        // API — все авторизованные
                         .requestMatchers("/api/**").authenticated()
-
-                        // Защита от всего остального
                         .anyRequest().hasRole("ADMIN")
                 )
                 .formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/dashboard", true)
+                        .successHandler((request, response, authentication) -> {
+                            String tsd = request.getParameter("tsd");
+                            if ("true".equals(tsd)) {
+                                response.sendRedirect("/tsd/tasks");
+                            } else {
+                                response.sendRedirect("/dashboard");
+                            }
+                        })
                         .permitAll()
                 )
+                .rememberMe(remember -> remember
+                        .key("uniqueAndSecret")
+                        .tokenValiditySeconds(86400) // 24 часа
+                )
                 .logout(logout -> logout
-                        .logoutSuccessUrl("/login?logout")
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            String referer = request.getHeader("Referer");
+                            if (referer != null && referer.contains("/tsd")) {
+                                response.sendRedirect("/tsd/login");
+                            } else {
+                                response.sendRedirect("/login?logout");
+                            }
+                        })
                         .permitAll()
                 )
                 .csrf(AbstractHttpConfigurer::disable);

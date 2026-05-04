@@ -22,7 +22,6 @@ import ru.tsvetikov.warehouse.router.model.mapper.StockMapper;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -139,12 +138,12 @@ public class StockService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void reserveStock(String productSku, Integer quantity) {
+    public void reserveStockNearest(String productSku, Integer quantity, double fromX, double fromY) {
         validateQuantity(quantity);
         checkAvailability(productSku, quantity);
 
         Product product = productService.getBySku(productSku);
-        List<Stock> stocks = stockRepository.findAvailableByProductIdFifoWithLock(product.getId());
+        List<Stock> stocks = stockRepository.findAvailableByProductIdNearestFirst(product.getId(), fromX, fromY);
 
         int remaining = quantity;
         for (Stock stock : stocks) {
@@ -163,7 +162,7 @@ public class StockService {
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        log.info("Reserved {} items of {}", quantity, productSku);
+        log.info("Reserved {} items of {} (nearest first)", quantity, productSku);
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -253,10 +252,8 @@ public class StockService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public Optional<String> findFirstAvailableLocationCodeForProduct(String productSku) {
-        return stockRepository.findFirstAvailableLocationForProduct(productSku)
-                .map(Location::getCode);
+    public List<Stock> findAvailableStocksByProductSku(String productSku) {
+        return stockRepository.findAvailableByProductSku(productSku);
     }
 
     private void validateTransfer(String fromLocationCode, String toLocationCode, Integer quantity) {
@@ -267,4 +264,6 @@ public class StockService {
         }
         validateQuantity(quantity);
     }
+
+
 }

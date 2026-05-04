@@ -19,7 +19,7 @@ import ru.tsvetikov.warehouse.router.model.enums.LocationType;
 import ru.tsvetikov.warehouse.router.model.mapper.LocationMapper;
 import ru.tsvetikov.warehouse.router.utils.PaginationUtils;
 
-import java.util.Optional;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -120,12 +120,9 @@ public class LocationService {
         return locationMapper.toResponseDto(location);
     }
 
-    @Transactional(readOnly = true)
-    @Cacheable(value = "locations", key = "'firstReceiving'")
-    public Optional<String> findFirstReceivingLocationCode() {
-        return locationRepository.findByType(LocationType.RECEIVING).stream()
-                .findFirst()
-                .map(Location::getCode);
+
+    public List<Location> findByType(LocationType type) {
+        return locationRepository.findByType(type);
     }
 
     private Location findLocationOrThrow(Long id) {

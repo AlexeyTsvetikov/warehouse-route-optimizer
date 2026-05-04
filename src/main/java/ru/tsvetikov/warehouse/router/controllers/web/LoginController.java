@@ -10,4 +10,9 @@ public class LoginController {
     public String login() {
         return "login";
     }
+
+    @GetMapping("/tsd/login")
+    public String tsdLogin() {
+        return "tsd/login-tsd";
+    }
 }

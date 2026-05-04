@@ -16,5 +16,6 @@ public record WarehouseTaskRequest(
         String targetLocationCode,
         String assignedUsername,
         String orderNumber,
-        @PositiveOrZero Integer confirmedQuantity
+        @PositiveOrZero Integer confirmedQuantity,
+        boolean skipReserve
 ) {}

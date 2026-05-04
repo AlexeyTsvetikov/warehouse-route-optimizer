@@ -18,3 +18,12 @@ spring:
     baseline-version: 0
     validate-on-migrate: true
     out-of-order: false
+
+  thymeleaf:
+    cache: false
+  devtools:
+    restart:
+      additional-paths: src/main/resources/templates
+      enabled: true
+    livereload:
+      enabled: true

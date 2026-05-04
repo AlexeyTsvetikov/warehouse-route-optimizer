@@ -102,11 +102,12 @@ public class OrderWebController {
     }
 
     @GetMapping("/{orderNumber}")
-    public String view(@PathVariable String orderNumber, Model model) {
+    public String view(@PathVariable String orderNumber, @RequestParam(required = false) String tsd, Model model) {
         OrderResponse order = orderService.getByNumber(orderNumber);
         List<OrderItemResponse> items = orderItemService.getByOrderForWeb(orderNumber);
         model.addAttribute("order", order);
         model.addAttribute("items", items);
+        model.addAttribute("tsd", "true".equals(tsd));
         return "orders/view";
     }
 

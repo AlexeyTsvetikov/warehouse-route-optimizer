@@ -23,8 +23,6 @@ public interface WarehouseTaskRepository extends JpaRepository<WarehouseTask, Lo
     Page<WarehouseTask> findByAssignedUserIdAndStatusIn(Long assignedUserId, List<WarehouseTaskStatus> statuses,
                                                         Pageable pageable);
 
-    boolean existsByOrderOrderNumberAndProductSku(String orderNumber, String productSku);
-
     @Query("SELECT t FROM WarehouseTask t " +
            "LEFT JOIN t.product p " +
            "LEFT JOIN t.order o " +
@@ -38,4 +36,6 @@ public interface WarehouseTaskRepository extends JpaRepository<WarehouseTask, Lo
 
     @Query("SELECT t FROM WarehouseTask t WHERE t.order.orderNumber = :orderNumber AND t.type = :type")
     List<WarehouseTask> findByOrderNumberAndType(@Param("orderNumber") String orderNumber, @Param("type") WarehouseTaskType type);
+
+    boolean existsByOrderOrderNumberAndStatusIn(String orderNumber, List<WarehouseTaskStatus> statuses);
 }

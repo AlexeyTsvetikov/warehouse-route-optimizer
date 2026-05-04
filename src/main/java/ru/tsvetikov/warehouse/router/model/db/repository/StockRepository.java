@@ -24,13 +24,13 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     Optional<Stock> findByProductAndLocationWithLock(@Param("product") Product product,
                                                      @Param("location") Location location);
 
-    // Метод для резервации (FIFO стратегия)
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"product", "location"})
-    @Query("SELECT s FROM Stock s WHERE s.product.id = :productId " +
+    @Query("SELECT s FROM Stock s JOIN s.location l WHERE s.product.id = :productId " +
            "AND s.quantity > s.reservedQuantity " +
-           "ORDER BY s.inboundDate ASC")
-    List<Stock> findAvailableByProductIdFifoWithLock(@Param("productId") Long productId);
+           "ORDER BY (ABS(l.coordX - :fromX) + ABS(l.coordY - :fromY)) ASC")
+    List<Stock> findAvailableByProductIdNearestFirst(@Param("productId") Long productId,
+                                                     @Param("fromX") double fromX,
+                                                     @Param("fromY") double fromY);
 
     List<Stock> findByProductId(Long productId);
 
@@ -41,8 +41,8 @@ public interface StockRepository extends JpaRepository<Stock, Long> {
     @Query("SELECT COALESCE(SUM(s.quantity - s.reservedQuantity), 0) FROM Stock s WHERE s.product.id = :productId")
     int sumAvailableQuantityByProductId(@Param("productId") Long productId);
 
-    @Query("SELECT s.location FROM Stock s WHERE s.product.sku = :productSku AND s.quantity > s.reservedQuantity ORDER BY s.inboundDate ASC")
-    Optional<Location> findFirstAvailableLocationForProduct(@Param("productSku") String productSku);
+    @Query("SELECT s FROM Stock s WHERE s.product.sku = :sku AND s.quantity > s.reservedQuantity")
+    List<Stock> findAvailableByProductSku(@Param("sku") String sku);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Stock s WHERE s.product.id = :productId AND s.reservedQuantity > 0 ORDER BY s.inboundDate ASC")

@@ -4,6 +4,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -107,6 +109,7 @@ public class WarehouseTaskWebController {
     public String view(@PathVariable Long id, Model model) {
         WarehouseTaskResponse task = warehouseTaskService.getById(id);
         model.addAttribute("task", task);
+        model.addAttribute("tsd", false);
         return "tasks/view";
     }
 
@@ -189,11 +192,13 @@ public class WarehouseTaskWebController {
     }
 
     @PostMapping("/{id}/assign")
-    public String assign(@PathVariable Long id, @RequestParam String username, Model model) {
+    public String assign(@PathVariable Long id, @RequestParam String username,
+                         @RequestParam(required = false) String tsd, Model model) {
         if (username == null || username.isBlank()) {
             WarehouseTaskResponse task = warehouseTaskService.getById(id);
             model.addAttribute("task", task);
-            model.addAttribute("errorMessage", "Не выбран оператор. Выберите оператора из списка.");
+            model.addAttribute("errorMessage", "Не выбран оператор.");
+            model.addAttribute("tsd", "true".equals(tsd));
             return "tasks/view";
         }
         try {
@@ -202,20 +207,45 @@ public class WarehouseTaskWebController {
             WarehouseTaskResponse task = warehouseTaskService.getById(id);
             model.addAttribute("task", task);
             model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("tsd", "true".equals(tsd));
             return "tasks/view";
+        }
+        if ("true".equals(tsd)) {
+            return "redirect:/tsd/tasks/" + id;
+        }
+        return "redirect:/tasks/" + id;
+    }
+
+    @PostMapping("/{id}/take")
+    public String takeTask(@PathVariable Long id, @RequestParam(required = false) String tsd, Model model) {
+        try {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            String username = auth.getName();
+            warehouseTaskService.assignTask(id, username);
+        } catch (CommonBackendException e) {
+            model.addAttribute("task", warehouseTaskService.getById(id));
+            model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("tsd", "true".equals(tsd));
+            return "tasks/view";
+        }
+        if ("true".equals(tsd)) {
+            return "redirect:/tsd/tasks/" + id;
         }
         return "redirect:/tasks/" + id;
     }
 
     @PostMapping("/{id}/start")
-    public String start(@PathVariable Long id, Model model) {
+    public String start(@PathVariable Long id, @RequestParam(required = false) String tsd, Model model) {
         try {
             warehouseTaskService.startTask(id);
         } catch (CommonBackendException e) {
-            WarehouseTaskResponse task = warehouseTaskService.getById(id);
-            model.addAttribute("task", task);
+            model.addAttribute("task", warehouseTaskService.getById(id));
             model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("tsd", "true".equals(tsd));
             return "tasks/view";
+        }
+        if ("true".equals(tsd)) {
+            return "redirect:/tsd/tasks/" + id;
         }
         return "redirect:/tasks/" + id;
     }
@@ -223,15 +253,29 @@ public class WarehouseTaskWebController {
     @PostMapping("/{id}/complete")
     public String complete(@PathVariable Long id,
                            @RequestParam(required = false) Integer confirmedQuantity,
+                           @RequestParam(required = false) String tsd,
                            Model model) {
         try {
             warehouseTaskService.completeTask(id, confirmedQuantity);
+            if ("true".equals(tsd)) {
+                return "redirect:/tsd/tasks";
+            }
             return "redirect:/tasks/" + id;
         } catch (CommonBackendException e) {
             WarehouseTaskResponse task = warehouseTaskService.getById(id);
             model.addAttribute("task", task);
             model.addAttribute("errorMessage", e.getMessage());
+            model.addAttribute("tsd", "true".equals(tsd));
             return "tasks/view";
         }
+    }
+
+    @PostMapping("/delete/{id}")
+    public String delete(@PathVariable Long id, @RequestParam(required = false) String tsd) {
+        warehouseTaskService.delete(id);
+        if ("true".equals(tsd)) {
+            return "redirect:/tsd/tasks";
+        }
+        return "redirect:/tasks";
     }
 }

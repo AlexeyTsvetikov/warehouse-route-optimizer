@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<body>
+<div class="card card-custom" style="min-height: 70vh; display: flex; flex-direction: column;">
+    <!-- Заголовок -->
+    <div class="p-3 border-bottom text-center">
+        <h5 class="mb-0 text-dark fw-bold">Заказы</h5>
+    </div>
+
+    <!-- Фильтр + Поиск -->
+    <div class="p-3 border-bottom">
+        <select class="form-select mb-2" onchange="this.form.submit()" form="orderSearchForm" name="status"
+                aria-label="Выбор статуса">
+            <option value="">Все статусы</option>
+            <option th:each="s : ${allStatuses}" th:value="${s.name()}" th:text="${s}"
+                    th:selected="${s.name() == selectedStatus?.name()}"></option>
+        </select>
+        <form id="orderSearchForm" th:action="@{/tsd/orders}" method="get" class="d-flex gap-2">
+            <input type="text" name="search" th:value="${search}" class="form-control" placeholder="Поиск заказов..."
+                   aria-label="Поиск заказов">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+            <a th:href="@{/tsd/orders}" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i></a>
+        </form>
+    </div>
+
+    <!-- Список -->
+    <div class="p-3 overflow-auto" style="flex: 1;">
+        <div th:if="${!orders.isEmpty()}">
+            <a th:each="order : ${orders}"
+               th:href="@{/orders/{orderNumber}(orderNumber=${order.orderNumber}, tsd=true)}"
+               class="list-group-item list-group-item-action mb-2 rounded p-3 shadow-sm text-decoration-none">
+                <div class="d-flex align-items-center">
+                    <div class="bg-light rounded p-2 me-3">
+                        <i class="bi bi-truck text-secondary" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between">
+                            <strong class="text-dark" th:text="${order.orderNumber}"></strong>
+                            <span class="badge" style="padding: 0.4em 0.8em; font-size: 0.85rem;"
+                                  th:classappend="${order.status.name() == 'NEW' ? 'badge-new' :
+        (order.status.name() == 'PROCESSING' ? 'badge-processing' :
+        (order.status.name() == 'COMPLETED' ? 'badge-completed' : 'badge-cancelled'))}"
+                                  th:text="${order.status}"></span>
+                        </div>
+                        <div class="mt-1 d-flex justify-content-between">
+                            <small class="text-muted" th:text="${order.type.name() == 'INBOUND' ? 'Поставка' : 'Отгрузка'}"></small>
+                            <small class="text-muted"
+                                   th:text="${order.customerName != null ? order.customerName : '—'}"></small>
+                        </div>
+                    </div>
+                    <div class="ms-2">
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div th:if="${orders.isEmpty()}" class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+            <p class="mt-2">Ничего не найдено</p>
+        </div>
+    </div>
+
+    <!-- Пагинация -->
+    <div th:if="${totalPages > 1}" class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+        <a th:href="@{/tsd/orders(page=${currentPage - 1}, status=${selectedStatus?.name()}, search=${search})}"
+           th:unless="${currentPage == 1}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <span class="pagination-text">Страница <strong th:text="${currentPage}"></strong> из <strong
+                th:text="${totalPages}"></strong></span>
+        <a th:href="@{/tsd/orders(page=${currentPage + 1}, status=${selectedStatus?.name()}, search=${search})}"
+           th:unless="${currentPage == totalPages}" class="btn btn-outline-secondary">
+            Вперёд <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</div>
+</body>
+</html>

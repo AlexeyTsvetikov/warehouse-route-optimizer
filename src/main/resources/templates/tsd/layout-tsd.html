@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Терминал сбора данных</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .offcanvas-menu .list-group-item {
+            border: none;
+            padding: 14px 20px;
+            font-size: 1.1rem;
+        }
+
+        .offcanvas-menu .list-group-item i {
+            width: 24px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Верхняя панель -->
+<nav class="navbar navbar-light bg-white shadow-sm border-bottom">
+    <div class="container-fluid d-flex justify-content-between align-items-center" style="max-width: 600px;">
+        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#tsdMenu">
+            <i class="bi bi-list"></i> Меню
+        </button>
+        <span class="navbar-brand fw-bold text-dark" style="font-size: 1.5rem; margin-left: 60px;">
+        <i class="bi bi-upc-scan"></i> TSD
+    </span>
+        <div class="dropdown">
+            <button class="btn btn-link text-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle"></i> <span sec:authentication="name"></span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><span class="dropdown-item-text"><span sec:authentication="name"></span></span></li>
+                <li><span class="dropdown-item-text text-muted small"><span
+                        sec:authentication="principal.authorities"></span></span></li>
+                <li>
+                    <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" th:href="@{/users/change-password/self(tsd=true)}">
+                    <i class="bi bi-key"></i> Сменить пароль</a></li>
+                <li>
+                    <form th:action="@{/logout}" method="post">
+                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i>
+                            Выйти
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Offcanvas меню -->
+<div class="offcanvas offcanvas-start offcanvas-menu" tabindex="-1" id="tsdMenu">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title">Меню</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="list-group list-group-flush">
+            <a href="/tsd/tasks" class="list-group-item list-group-item-action fw-bold">
+                <i class="bi bi-house-door"></i> Главная
+            </a>
+            <div class="border-bottom my-1"></div>
+            <a href="/tsd/tasks" class="list-group-item list-group-item-action">
+                <i class="bi bi-check2-square"></i> Задачи
+            </a>
+            <a href="/tsd/products" class="list-group-item list-group-item-action">
+                <i class="bi bi-box-seam"></i> Товары
+            </a>
+            <a href="/tsd/stocks" class="list-group-item list-group-item-action">
+                <i class="bi bi-grid-3x2"></i> Запасы
+            </a>
+            <a href="/tsd/categories" class="list-group-item list-group-item-action">
+                <i class="bi bi-folder2-open"></i> Категории
+            </a>
+            <a href="/tsd/locations" class="list-group-item list-group-item-action">
+                <i class="bi bi-geo-alt"></i> Локации
+            </a>
+            <a href="/tsd/orders" class="list-group-item list-group-item-action">
+                <i class="bi bi-truck"></i> Заказы
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Основной контент -->
+<div class="container mt-3" style="max-width: 600px;">
+    <div th:insert="~{${content}}"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

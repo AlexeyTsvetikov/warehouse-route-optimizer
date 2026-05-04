@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<body>
+<div class="card card-custom" style="min-height: 70vh; display: flex; flex-direction: column;">
+    <!-- Заголовок -->
+    <div class="p-3 border-bottom text-center">
+        <h5 class="mb-0 text-dark fw-bold">Категории</h5>
+    </div>
+
+    <!-- Поиск -->
+    <div class="p-3 border-bottom">
+        <form th:action="@{/tsd/categories}" method="get" class="d-flex gap-2">
+            <input type="text" name="search" th:value="${search}" class="form-control" placeholder="Поиск категорий..."
+                   aria-label="Поиск по названию или описанию категории ">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+            <a th:href="@{/tsd/categories}" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i></a>
+        </form>
+    </div>
+
+    <!-- Список -->
+    <div class="d-flex flex-column" style="height: 100vh;">
+
+        <!-- Список: занимает всё свободное место (flex: 1) и скроллится -->
+        <div class="p-3 overflow-auto" style="flex: 1;">
+            <div th:if="${!categories.isEmpty()}">
+                <div th:each="cat : ${categories}"
+                     class="list-group-item mb-2 rounded p-3 shadow-sm border-0" style="background: #fff;">
+                    <div class="d-flex align-items-center">
+
+                        <!-- Иконка категории -->
+                        <div class="bg-light rounded p-2 me-3">
+                            <i class="bi bi-tag text-secondary" style="font-size: 1.5rem;"></i>
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <!-- Только название (ID убрали) -->
+                            <strong class="text-dark d-block" th:text="${cat.name}"></strong>
+                            <!-- Описание категории -->
+                            <div class="mt-1 text-secondary small" th:text="${cat.description}"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Заглушка, если пусто -->
+            <div th:if="${categories.isEmpty()}" class="text-center text-muted py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+                <p class="mt-2">Ничего не найдено</p>
+            </div>
+        </div>
+
+        <!-- Пагинация -->
+        <div th:if="${totalPages > 1}" class="p-3 border-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <a th:href="@{/tsd/categories(page=${currentPage - 1}, search=${search})}"
+                   th:unless="${currentPage == 1}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Назад
+                </a>
+                <span class="pagination-text">
+            <i class="bi bi-layout-text-window"></i> Страница <strong th:text="${currentPage}"></strong> из <strong
+                        th:text="${totalPages}"></strong>
+        </span>
+                <a th:href="@{/tsd/categories(page=${currentPage + 1}, search=${search})}"
+                   th:unless="${currentPage == totalPages}" class="btn btn-sm btn-outline-secondary">
+                    Вперёд <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

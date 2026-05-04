@@ -217,10 +217,16 @@ public class OrderService {
             throw new CommonBackendException("Order is already cancelled", HttpStatus.BAD_REQUEST);
         }
 
-        for (OrderItem item : order.getOrderItems()) {
-            int reservedQuantity = item.getQuantity() - item.getCollectedQuantity();
-            if (reservedQuantity > 0) {
-                stockService.releaseReserved(item.getProduct().getSku(), reservedQuantity);
+        if (order.getStatus() == OrderStatus.PROCESSING) {
+            boolean hasActiveTasks = warehouseTaskService.hasActiveTasksForOrder(orderNumber);
+
+            if (hasActiveTasks) {
+                for (OrderItem item : order.getOrderItems()) {
+                    int reservedQuantity = item.getQuantity() - item.getCollectedQuantity();
+                    if (reservedQuantity > 0) {
+                        stockService.releaseReserved(item.getProduct().getSku(), reservedQuantity);
+                    }
+                }
             }
         }
 

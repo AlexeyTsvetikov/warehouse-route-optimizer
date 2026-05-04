@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<body>
+<div class="card card-custom" style="min-height: 70vh; display: flex; flex-direction: column;">
+    <!-- Заголовок -->
+    <div class="p-3 border-bottom text-center">
+        <h5 class="mb-0 text-dark fw-bold">Запасы</h5>
+    </div>
+
+    <!-- Фильтр + Поиск -->
+    <div class="p-3 border-bottom">
+        <select class="form-select mb-2"
+                onchange="location.href='?location=' + this.value + '&search=' + document.querySelector('input[name=search]').value"
+                aria-label="Тип локации">
+            <option value="">Все локации</option>
+            <option th:each="loc : ${locations}" th:value="${loc.code}" th:text="${loc.code}"
+                    th:selected="${loc.code == selectedLocation}"></option>
+        </select>
+        <form th:action="@{/tsd/stocks}" method="get" class="d-flex gap-2">
+            <input type="text" name="search" th:value="${search}" class="form-control" placeholder="Поиск по SKU..."
+                   aria-label="Поиск по артикулу">
+            <input type="hidden" name="location" th:value="${selectedLocation}"/>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+            <a th:href="@{/tsd/stocks}" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat"></i></a>
+        </form>
+    </div>
+
+    <!-- Список -->
+    <div class="p-3 overflow-auto" style="flex: 1;">
+        <div th:if="${!stocks.isEmpty()}">
+            <div th:each="s : ${stocks}"
+                 class="list-group-item mb-2 rounded p-3 shadow-sm border-0" style="background: #fff;">
+                <div class="d-flex align-items-center">
+
+                    <!-- Иконка склада (коробка/архив) -->
+                    <div class="bg-light rounded p-2 me-3">
+                        <i class="bi bi-box-seam text-secondary" style="font-size: 1.5rem;"></i>
+                    </div>
+
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <!-- SKU товара -->
+                                <strong class="text-dark d-block" th:text="${s.productSku}"></strong>
+                                <!-- Локация под SKU -->
+                                <small class="text-muted">
+                                    <i class="bi bi-geo-alt me-1"></i><span th:text="${s.locationCode}"></span>
+                                </small>
+                            </div>
+
+                            <!-- Блок с количеством справа -->
+                            <div class="text-end">
+                                <div class="lh-1">
+                                    <span class="fs-5 fw-bold text-dark" th:text="${s.quantity}"></span>
+                                    <small class="text-muted">шт.</small>
+                                </div>
+                                <!-- Компактные данные о резерве -->
+                                <div class="mt-1" style="font-size: 0.75rem;">
+                                    <span class="text-secondary">Доступно: <span class="fw-bold text-success"
+                                                                                 th:text="${s.availableQuantity}"></span></span>
+                                    <span class="text-secondary ms-1">| Резерв: <span
+                                            th:text="${s.reservedQuantity}"></span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <!-- Заглушка -->
+        <div th:if="${stocks.isEmpty()}" class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+            <p class="mt-2">Ничего не найдено</p>
+        </div>
+    </div>
+
+
+    <!-- Заглушка -->
+    <div th:if="${stocks.isEmpty()}" class="text-center text-muted py-5">
+        <i class="bi bi-inbox" style="font-size: 4rem;"></i>
+        <p class="mt-2">Ничего не найдено</p>
+    </div
+    ><!-- Пагинация -->
+    <div th:if="${totalPages > 1}" class="d-flex justify-content-between align-items-center mt-3 px-3 pb-3">
+        <a th:href="@{/tsd/stocks(page=${currentPage - 1}, location=${selectedLocation}, search=${search})}"
+           th:unless="${currentPage == 1}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <span class="pagination-text">Страница <strong th:text="${currentPage}"></strong> из <strong
+                th:text="${totalPages}"></strong></span>
+        <a th:href="@{/tsd/stocks(page=${currentPage + 1}, location=${selectedLocation}, search=${search})}"
+           th:unless="${currentPage == totalPages}" class="btn btn-outline-secondary">
+            Вперёд <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</div>
+</body>
+</html>
