@@ -24,7 +24,7 @@ public class SecurityConfig {
                         .requestMatchers("/users/**").hasRole("ADMIN")
                         .requestMatchers("/tsd/**").hasAnyRole("ADMIN", "MANAGER", "OPERATOR", "PICKER", "DRIVER")
                         .requestMatchers("/categories/**", "/locations/**", "/products/**",
-                                "/orders/**", "/stocks/**", "/tasks/**", "/dashboard")
+                                "/orders/**", "/stocks/**", "/tasks/**")
                         .hasAnyRole("ADMIN", "MANAGER", "OPERATOR", "PICKER", "DRIVER")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().hasRole("ADMIN")
@@ -36,7 +36,7 @@ public class SecurityConfig {
                             if ("true".equals(tsd)) {
                                 response.sendRedirect("/tsd/tasks");
                             } else {
-                                response.sendRedirect("/dashboard");
+                                response.sendRedirect("/tasks");
                             }
                         })
                         .permitAll()

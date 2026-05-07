@@ -1,20 +1,34 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ru">
-<body>
-<nav th:fragment="navbar" class="navbar navbar-light bg-white shadow-sm mb-4 border-bottom">
-    <div class="container d-flex justify-content-between align-items-center">
-        <a href="/dashboard" class="btn btn-outline-secondary" title="На главную">
+<nav th:fragment="navbar" xmlns:th="http://www.thymeleaf.org"
+     xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+     class="navbar navbar-light bg-white shadow-sm mb-4 border-bottom">
+    <div class="container d-flex justify-content-between align-items-center py-2">
+        <a href="/tasks" class="btn btn-outline-secondary btn-sm" title="На главную">
             <i class="bi bi-house-door"></i>
         </a>
-        <span class="fw-bold text-dark" style="font-size: 1.5rem; margin-left: 60px;">
-            <i class="bi bi-boxes"></i> WMS
-        </span>
+
+        <div class="d-flex gap-1">
+            <a href="/categories"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Категории</a>
+            <a href="/products"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Товары</a>
+            <a href="/stocks"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Запасы</a>
+            <a href="/locations"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Локации</a>
+            <a href="/tasks"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Задачи</a>
+            <a href="/orders"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Заказы</a>
+            <a sec:authorize="hasRole('ADMIN')" href="/users"
+               class="text-dark text-decoration-none fw-medium small px-3 py-1 rounded-pill hover-bg-light">Пользователи</a>
+        </div>
+
         <div class="dropdown">
-            <button class="btn btn-link text-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                <i class="bi bi-person-circle"></i> <span sec:authentication="name"></span>
+            <button class="btn btn-link text-dark text-decoration-none dropdown-toggle" type="button"
+                    data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i><span sec:authentication="name"></span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                <li><span class="dropdown-item-text"><span sec:authentication="name"></span></span></li>
                 <li><span class="dropdown-item-text text-muted small" sec:authentication="principal.authorities"></span>
                 </li>
                 <li>
@@ -33,5 +47,3 @@
         </div>
     </div>
 </nav>
-</body>
-</html>
