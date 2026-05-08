@@ -3,6 +3,8 @@ package ru.tsvetikov.warehouse.router.controllers.web;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +29,7 @@ public class TsdController {
     private final StockService stockService;
     private final ProductService productService;
     private final OrderService orderService;
+    private final RoutingService routingService;
 
     @GetMapping
     public String index() {
@@ -150,4 +153,23 @@ public class TsdController {
         model.addAttribute("content", "tsd/order-list");
         return "tsd/layout-tsd";
     }
+
+    @GetMapping("/tasks/route")
+    public String showRoute(Model model) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        List<WarehouseTaskResponse> tasks = taskService
+                .getTasksByUserAndStatus(username,
+                        List.of(WarehouseTaskStatus.ASSIGNED, WarehouseTaskStatus.IN_PROGRESS),
+                        1, 100, "createdAt", Sort.Direction.ASC)
+                .getContent();
+
+        RouteResponse result = routingService.calculateRoute(tasks, 0.0, 0.0);
+
+        model.addAttribute("result", result);
+        model.addAttribute("content", "/tsd/route");
+        return "tsd/layout-tsd";
+    }
+
 }

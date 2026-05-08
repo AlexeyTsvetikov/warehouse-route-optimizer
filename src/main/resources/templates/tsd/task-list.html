@@ -9,11 +9,16 @@
 
   <!-- Фильтр -->
   <div class="p-3 border-bottom">
-    <select class="form-select" onchange="this.form.submit()" form="taskFilterForm" name="status" aria-label="Статус задачи">
-      <option value="CREATED" th:selected="${selectedStatus == null or selectedStatus.name() == 'CREATED'}">Новые</option>
-      <option value="ASSIGNED" th:selected="${selectedStatus?.name() == 'ASSIGNED'}">Мои</option>
-      <option value="IN_PROGRESS" th:selected="${selectedStatus?.name() == 'IN_PROGRESS'}">В работе</option>
-    </select>
+    <div class="d-flex gap-2">
+      <select class="form-select" onchange="this.form.submit()" form="taskFilterForm" name="status" aria-label="Статус задач">
+        <option value="CREATED" th:selected="${selectedStatus == null or selectedStatus.name() == 'CREATED'}">Новые</option>
+        <option value="ASSIGNED" th:selected="${selectedStatus?.name() == 'ASSIGNED'}">Мои</option>
+        <option value="IN_PROGRESS" th:selected="${selectedStatus?.name() == 'IN_PROGRESS'}">В работе</option>
+      </select>
+      <a href="/tsd/tasks/route" class="btn btn-outline-success d-flex align-items-center" title="Построить маршрут">
+        <i class="bi bi-signpost-split"></i>
+      </a>
+    </div>
     <form id="taskFilterForm" th:action="@{/tsd/tasks}" method="get" class="d-none"></form>
   </div>
 
