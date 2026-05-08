@@ -2,6 +2,7 @@ package ru.tsvetikov.warehouse.router.model.dto.response;
 
 import java.util.List;
 
+@SuppressWarnings("unused")
 public record RouteResponse(
         List<WarehouseTaskResponse> fifoOrder,
         List<WarehouseTaskResponse> tspOrder,

@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!--@elvariable id="result" type="u.tsvetikov.warehouse.router.model.dto.response.RouteResponse"-->
 <html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <body>
 <div class="card card-custom" style="min-height: 70vh; display: flex; flex-direction: column;">
@@ -11,11 +10,11 @@
         <div class="row text-center">
             <div class="col-4">
                 <small class="text-muted d-block">FIFO</small>
-                <strong th:text="${result.fifoDistance() + ' м'}"></strong>
+                <strong th:text="${result.fifoDistance + ' м'}"></strong>
             </div>
             <div class="col-4">
                 <small class="text-muted d-block">TSP</small>
-                <strong class="text-success" th:text="${result.tspDistance() + ' м'}"></strong>
+                <strong class="text-success" th:text="${result.tspDistance + ' м'}"></strong>
             </div>
             <div class="col-4">
                 <small class="text-muted d-block">Экономия</small>
@@ -30,12 +29,12 @@
             <div class="col-6">
                 <h6 class="text-muted mb-2">Порядок FIFO</h6>
                 <div class="d-flex flex-column gap-1">
-                    <div th:each="task, iterStat : ${result.fifoOrder()}"
+                    <div th:each="task, iterStat : ${result.fifoOrder}"
                          class="d-flex align-items-center gap-2 p-2 bg-light rounded">
                         <span class="badge bg-secondary rounded-pill" th:text="${iterStat.index + 1}"></span>
                         <div>
-                            <strong th:text="${task.productSku()}"></strong>
-                            <small class="text-muted d-block" th:text="${task.sourceLocationCode()}"></small>
+                            <strong th:text="${task.productSku}"></strong>
+                            <small class="text-muted d-block" th:text="${task.sourceLocationCode}"></small>
                         </div>
                     </div>
                 </div>
@@ -43,12 +42,12 @@
             <div class="col-6">
                 <h6 class="text-success mb-2">Порядок TSP</h6>
                 <div class="d-flex flex-column gap-1">
-                    <div th:each="task, iterStat : ${result.tspOrder()}"
+                    <div th:each="task, iterStat : ${result.tspOrder}"
                          class="d-flex align-items-center gap-2 p-2 bg-light rounded">
                         <span class="badge bg-success rounded-pill" th:text="${iterStat.index + 1}"></span>
                         <div>
-                            <strong th:text="${task.productSku()}"></strong>
-                            <small class="text-muted d-block" th:text="${task.sourceLocationCode()}"></small>
+                            <strong th:text="${task.productSku}"></strong>
+                            <small class="text-muted d-block" th:text="${task.sourceLocationCode}"></small>
                         </div>
                     </div>
                 </div>
