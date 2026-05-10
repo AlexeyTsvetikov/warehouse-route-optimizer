@@ -165,7 +165,7 @@ public class TsdController {
                         1, 100, "createdAt", Sort.Direction.ASC)
                 .getContent();
 
-        RouteResponse result = routingService.calculateRoute(tasks, 0.0, 0.0);
+        RouteResponse result = routingService.calculateCombinedRoute(tasks, 0.0, 0.0);
 
         model.addAttribute("result", result);
         model.addAttribute("content", "/tsd/route");

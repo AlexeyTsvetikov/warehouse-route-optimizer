@@ -18,27 +18,58 @@ public class RoutingService {
 
     private final LocationService locationService;
 
-    public RouteResponse calculateRoute(List<WarehouseTaskResponse> tasks, double startX, double startY) {
-        if (tasks.isEmpty()) {
+    public RouteResponse calculateCombinedRoute(List<WarehouseTaskResponse> allTasks, double startX, double startY) {
+        if (allTasks.isEmpty()) {
             return new RouteResponse(List.of(), List.of(), 0, 0);
         }
 
-        double fifoDistance = calculateTotalDistance(tasks, startX, startY);
+        // FIFO — исходный порядок для сравнения
+        double fifoDistance = calculateTotalDistance(allTasks, startX, startY);
 
-        List<WarehouseTaskResponse> tspOrder = new ArrayList<>(tasks);
-        tspOrder.sort(Comparator.comparingDouble(task -> {
-            if (task.sourceLocationCode() == null) return Double.MAX_VALUE;
-            Location loc = locationService.getByCode(task.sourceLocationCode());
-            return Math.abs(loc.getCoordX() - startX) + Math.abs(loc.getCoordY() - startY);
-        }));
+        // Жадный TSP для всех задач (RECEIVING + PICKING вместе)
+        List<WarehouseTaskResponse> remaining = new ArrayList<>(allTasks);
+        List<WarehouseTaskResponse> tspOrder = new ArrayList<>();
+
+        double currentX = startX, currentY = startY;
+
+        while (!remaining.isEmpty()) {
+            double finalCurrentX = currentX, finalCurrentY = currentY;
+            WarehouseTaskResponse nearest = remaining.stream()
+                    .min(Comparator.comparingDouble(t -> distanceFromPoint(t, finalCurrentX, finalCurrentY)))
+                    .orElseThrow(); // всегда есть элемент
+
+            tspOrder.add(nearest);
+            remaining.remove(nearest);
+
+            String locCode = getLocationCode(nearest);
+            if (locCode != null) {
+                Location loc = locationService.getByCode(locCode);
+                currentX = loc.getCoordX();
+                currentY = loc.getCoordY();
+            }
+        }
+
         double tspDistance = calculateTotalDistance(tspOrder, startX, startY);
 
-        log.info("Route calculated: FIFO={}m, TSP={}m, Saved={}m ({}%)",
+        log.info("Combined route: FIFO={}m, TSP={}m, Saved={}m ({}%)",
                 fifoDistance, tspDistance,
                 Math.round((fifoDistance - tspDistance) * 100.0) / 100.0,
                 fifoDistance > 0 ? (int) Math.round((1 - tspDistance / fifoDistance) * 100) : 0);
 
-        return new RouteResponse(tasks, tspOrder, fifoDistance, tspDistance);
+        return new RouteResponse(allTasks, tspOrder, fifoDistance, tspDistance);
+    }
+
+    private double distanceFromPoint(WarehouseTaskResponse task, double x, double y) {
+        String locCode = getLocationCode(task);
+        if (locCode == null) return Double.MAX_VALUE;
+        Location loc = locationService.getByCode(locCode);
+        return Math.abs(loc.getCoordX() - x) + Math.abs(loc.getCoordY() - y);
+    }
+
+    private String getLocationCode(WarehouseTaskResponse task) {
+        if (task.sourceLocationCode() != null) return task.sourceLocationCode();
+        if (task.targetLocationCode() != null) return task.targetLocationCode();
+        return null;
     }
 
     private double calculateTotalDistance(List<WarehouseTaskResponse> tasks, double startX, double startY) {
@@ -46,8 +77,9 @@ public class RoutingService {
         double prevX = startX, prevY = startY;
 
         for (WarehouseTaskResponse task : tasks) {
-            if (task.sourceLocationCode() != null) {
-                Location loc = locationService.getByCode(task.sourceLocationCode());
+            String locCode = getLocationCode(task);
+            if (locCode != null) {
+                Location loc = locationService.getByCode(locCode);
                 total += Math.abs(loc.getCoordX() - prevX) + Math.abs(loc.getCoordY() - prevY);
                 prevX = loc.getCoordX();
                 prevY = loc.getCoordY();
