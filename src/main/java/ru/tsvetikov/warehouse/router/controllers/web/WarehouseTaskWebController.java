@@ -2,6 +2,7 @@ package ru.tsvetikov.warehouse.router.controllers.web;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
@@ -20,6 +21,7 @@ import ru.tsvetikov.warehouse.router.service.UserService;
 import ru.tsvetikov.warehouse.router.service.WarehouseTaskService;
 import ru.tsvetikov.warehouse.router.utils.ValidationUtils;
 
+@Slf4j
 @Controller
 @RequestMapping("/tasks")
 @RequiredArgsConstructor
@@ -232,6 +234,20 @@ public class WarehouseTaskWebController {
             return "redirect:/tsd/tasks/" + id;
         }
         return "redirect:/tasks/" + id;
+    }
+
+    @PostMapping("/take-all")
+    public String takeAllTasks(@RequestParam(required = false) String tsd) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+
+        int taken = warehouseTaskService.takeAllTasks(username);
+        log.info("Taken {} tasks by user {}", taken, username);
+
+        if ("true".equals(tsd)) {
+            return "redirect:/tsd/tasks?status=ASSIGNED";
+        }
+        return "redirect:/tasks";
     }
 
     @PostMapping("/{id}/start")

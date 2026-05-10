@@ -9,7 +9,7 @@
 
   <!-- Фильтр -->
   <div class="p-3 border-bottom">
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 mb-2">
       <select class="form-select" onchange="this.form.submit()" form="taskFilterForm" name="status" aria-label="Статус задач">
         <option value="CREATED" th:selected="${selectedStatus == null or selectedStatus.name() == 'CREATED'}">Новые</option>
         <option value="ASSIGNED" th:selected="${selectedStatus?.name() == 'ASSIGNED'}">Мои</option>
@@ -19,6 +19,12 @@
         <i class="bi bi-signpost-split"></i>
       </a>
     </div>
+    <form th:action="@{/tasks/take-all}" method="post">
+      <input type="hidden" name="tsd" value="true"/>
+      <button type="submit" class="btn btn-secondary w-100">
+        <i class="bi bi-plus-lg"></i> Взять все задачи
+      </button>
+    </form>
     <form id="taskFilterForm" th:action="@{/tsd/tasks}" method="get" class="d-none"></form>
   </div>
 

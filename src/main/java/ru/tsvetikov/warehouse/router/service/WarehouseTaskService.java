@@ -277,6 +277,25 @@ public class WarehouseTaskService {
     }
 
     @Transactional
+    public int takeAllTasks(String username) {
+        List<WarehouseTaskResponse> tasks = getByStatus(WarehouseTaskStatus.CREATED, 1, 500, "createdAt", Sort.Direction.ASC)
+                .getContent();
+
+        int taken = 0;
+        for (WarehouseTaskResponse task : tasks) {
+            try {
+                assignTask(task.id(), username);
+                taken++;
+            } catch (CommonBackendException e) {
+                log.warn("Could not take task {}: {}", task.id(), e.getMessage());
+            }
+        }
+
+        log.info("User {} took {} tasks", username, taken);
+        return taken;
+    }
+
+    @Transactional
     public WarehouseTaskResponse startTask(Long id) {
         WarehouseTask task = findTaskOrThrow(id);
 
