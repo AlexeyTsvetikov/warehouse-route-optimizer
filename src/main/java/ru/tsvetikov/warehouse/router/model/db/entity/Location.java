@@ -3,8 +3,7 @@ package ru.tsvetikov.warehouse.router.model.db.entity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.*;
 import ru.tsvetikov.warehouse.router.model.enums.LocationType;
 
@@ -16,6 +15,9 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "locations")
 public class Location {
     @Id
@@ -63,12 +65,13 @@ public class Location {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Builder.Default
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
+    @Builder.Default
     @OneToMany(mappedBy = "location", fetch = FetchType.LAZY)
     @JsonManagedReference(value = "location-stock")
     private List<Stock> stocks = new ArrayList<>();
-
 }
