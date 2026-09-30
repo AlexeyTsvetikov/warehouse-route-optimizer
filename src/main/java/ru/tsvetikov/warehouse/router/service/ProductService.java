@@ -133,7 +133,9 @@ public class ProductService {
     }
 
     private String formatSku(String sku) {
-        if (sku == null || sku.isBlank()) return sku;
+        if (sku == null || sku.isBlank()) {
+            throw new CommonBackendException("Sku must not be blank", HttpStatus.BAD_REQUEST);
+        }
         return sku.toUpperCase();
     }
 

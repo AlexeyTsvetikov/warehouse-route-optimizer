@@ -164,7 +164,9 @@ public class UserService {
     }
 
     private String formatUsername(String username) {
-        if (username == null || username.isBlank()) return username;
+        if (username == null || username.isBlank()) {
+            throw new CommonBackendException("Username must not be blank", HttpStatus.BAD_REQUEST);
+        }
         return username.toLowerCase();
     }
 

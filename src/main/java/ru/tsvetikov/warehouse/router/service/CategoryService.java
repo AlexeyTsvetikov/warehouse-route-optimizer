@@ -113,7 +113,9 @@ public class CategoryService {
     }
 
     private String formatName(String name) {
-        if (name == null || name.isBlank()) return name;
+        if (name == null || name.isBlank()) {
+            throw new CommonBackendException("Name must not be blank", HttpStatus.BAD_REQUEST);
+        }
         return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
     }
 

@@ -73,11 +73,12 @@ public class LocationService {
     public LocationResponse update(Long id, LocationRequest request) {
         Location location = findLocationOrThrow(id);
 
-
-        if (request.code() != null && !request.code().equals(location.getCode())) {
+        if (request.code() != null) {
             String formattedCode = formatCode(request.code());
-            checkCodeUniqueness(formattedCode);
-            location.setCode(formattedCode);
+            if (!formattedCode.equals(location.getCode())) {
+                checkCodeUniqueness(formattedCode);
+                location.setCode(formattedCode);
+            }
         }
 
         locationMapper.updateEntityFromDto(request, location);
@@ -89,8 +90,10 @@ public class LocationService {
     public void updateFromWeb(Long id, LocationForm form) {
         Location location = findLocationOrThrow(id);
 
-        if (!form.getCode().equals(location.getCode())) {
-            checkCodeUniqueness(form.getCode());
+        String formattedCode = formatCode(form.getCode());
+        if (!formattedCode.equals(location.getCode())) {
+            checkCodeUniqueness(formattedCode);
+            location.setCode(formattedCode);
         }
 
         locationMapper.updateEntityFromForm(form, location);
@@ -120,7 +123,7 @@ public class LocationService {
         return locationMapper.toResponseDto(location);
     }
 
-
+    @Transactional(readOnly = true)
     public List<Location> findByType(LocationType type) {
         return locationRepository.findByType(type);
     }
@@ -132,7 +135,9 @@ public class LocationService {
     }
 
     private String formatCode(String code) {
-        if (code == null || code.isBlank()) return code;
+        if (code == null || code.isBlank()) {
+            throw new CommonBackendException("Code must not be blank", HttpStatus.BAD_REQUEST);
+        }
         return code.toUpperCase();
     }
 

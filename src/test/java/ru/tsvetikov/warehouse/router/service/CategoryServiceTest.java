@@ -64,7 +64,7 @@ class CategoryServiceTest {
     void shouldThrowWhenNameExists() {
         CategoryRequest request = new CategoryRequest("Electronics", "Description");
 
-        when(categoryRepository.existsByNameIgnoreCase(anyString())).thenReturn(true);
+        when(categoryRepository.existsByNameIgnoreCase("Electronics")).thenReturn(true);
 
         assertThatThrownBy(() -> categoryService.create(request))
                 .isInstanceOf(CommonBackendException.class)
@@ -75,59 +75,27 @@ class CategoryServiceTest {
     }
 
     @Test
-    void shouldNotFormatNameWhenNull() {
+    void shouldThrowWhenNameIsNull() {
         CategoryRequest request = new CategoryRequest(null, "Description");
 
-        Category entity = Category.builder()
-                .description("Description")
-                .name(null)
-                .build();
+        assertThatThrownBy(() -> categoryService.create(request))
+                .isInstanceOf(CommonBackendException.class)
+                .hasMessageContaining("Name must not be blank");
 
-        Category saved = Category.builder()
-                .id(1L)
-                .description("Description")
-                .name(null)
-                .build();
-
-        CategoryResponse response = new CategoryResponse(1L, null, "Description");
-
-        when(categoryRepository.existsByNameIgnoreCase(null)).thenReturn(false);
-        when(categoryMapper.toEntity(request)).thenReturn(entity);
-        when(categoryRepository.save(entity)).thenReturn(saved);
-        when(categoryMapper.toResponseDto(saved)).thenReturn(response);
-
-        CategoryResponse result = categoryService.create(request);
-
-        assertThat(result).isEqualTo(response);
-        verify(categoryRepository).existsByNameIgnoreCase(null);
+        verifyNoInteractions(categoryMapper);
+        verify(categoryRepository, never()).save(any());
     }
 
     @Test
-    void shouldNotFormatBlankName() {
+    void shouldThrowWhenNameIsBlank() {
         CategoryRequest request = new CategoryRequest("   ", "Description");
 
-        Category entity = Category.builder()
-                .description("Description")
-                .name("   ")
-                .build();
+        assertThatThrownBy(() -> categoryService.create(request))
+                .isInstanceOf(CommonBackendException.class)
+                .hasMessageContaining("Name must not be blank");
 
-        Category saved = Category.builder()
-                .id(1L)
-                .description("Description")
-                .name("   ")
-                .build();
-
-        CategoryResponse response = new CategoryResponse(1L, "   ", "Description");
-
-        when(categoryRepository.existsByNameIgnoreCase("   ")).thenReturn(false);
-        when(categoryMapper.toEntity(request)).thenReturn(entity);
-        when(categoryRepository.save(entity)).thenReturn(saved);
-        when(categoryMapper.toResponseDto(saved)).thenReturn(response);
-
-        CategoryResponse result = categoryService.create(request);
-
-        assertThat(result).isEqualTo(response);
-        verify(categoryRepository).existsByNameIgnoreCase("   ");
+        verifyNoInteractions(categoryMapper);
+        verify(categoryRepository, never()).save(any());
     }
 
     @Test
