@@ -20,7 +20,7 @@ public interface LocationRepository extends JpaRepository<Location, Long> {
 
     Page<Location> findAllByIsActiveTrue(Pageable pageRequest);
 
-    Optional<Location> findByCode(String code);
+    Optional<Location> findByCodeIgnoreCase(String code);
 
     @Query("SELECT l FROM Location l WHERE (LOWER(l.code) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(l.type) " +
            "LIKE LOWER(CONCAT('%', :query, '%')))")

@@ -1,7 +1,6 @@
 package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,10 +24,11 @@ public class ProductService {
     private final ProductMapper productMapper;
     private final CategoryService categoryService;
 
+
     @Transactional(readOnly = true)
-    @Cacheable(value = "products", key = "#sku")
     public Product getBySku(String sku) {
-        return productRepository.findBySku(sku)
+        validateSku(sku);
+        return productRepository.findBySkuIgnoreCase(sku)
                 .orElseThrow(() -> new CommonBackendException(
                         String.format("Product with SKU '%s' not found", sku), HttpStatus.NOT_FOUND));
     }
@@ -80,14 +80,13 @@ public class ProductService {
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = findProductOrThrow(id);
 
-        if (request.sku() != null && !request.sku().equals(product.getSku())) {
+        if (request.sku() != null && !request.sku().equalsIgnoreCase(product.getSku())) {
             String formattedSku = formatSku(request.sku());
             checkSkuUniqueness(formattedSku);
             product.setSku(formattedSku);
         }
 
-
-        if (request.categoryName() != null && !request.categoryName().equals(product.getCategory().getName())) {
+        if (request.categoryName() != null && !request.categoryName().equalsIgnoreCase(product.getCategory().getName())) {
             Category newCategory = findCategoryByNameOrThrow(request.categoryName());
             product.setCategory(newCategory);
         }
@@ -132,10 +131,14 @@ public class ProductService {
         return categoryService.getCategoryEntityByCategoryName(categoryName);
     }
 
-    private String formatSku(String sku) {
+    private void validateSku(String sku) {
         if (sku == null || sku.isBlank()) {
             throw new CommonBackendException("Sku must not be blank", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private String formatSku(String sku) {
+        validateSku(sku);
         return sku.toUpperCase();
     }
 

@@ -101,26 +101,43 @@ class LocationServiceTest {
         String code = "recv-01";
         Location entity = LocationTestData.entityBuilder().code("RECV-01").build();
 
-        when(locationRepository.findByCode(code)).thenReturn(Optional.of(entity));
+        when(locationRepository.findByCodeIgnoreCase(code)).thenReturn(Optional.of(entity));
 
         Location result = locationService.getByCode(code);
 
         assertThat(result).isEqualTo(entity);
-        verify(locationRepository).findByCode(code);
+        verify(locationRepository).findByCodeIgnoreCase(code);
     }
 
     @Test
     void shouldThrowWhenLocationNotFoundByCode() {
         String code = "recv-01";
 
-        when(locationRepository.findByCode(code)).thenReturn(Optional.empty());
+        when(locationRepository.findByCodeIgnoreCase(code)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> locationService.getByCode(code))
                 .isInstanceOf(CommonBackendException.class)
                 .hasMessageContaining("Location with code '%s' not found", code);
 
-        verify(locationRepository).findByCode("recv-01");
-        verify(locationRepository, never()).save(any());
+        verify(locationRepository).findByCodeIgnoreCase("recv-01");
+    }
+
+    @Test
+    void shouldThrowWhenLocationCodeIsNull() {
+        assertThatThrownBy(() -> locationService.getByCode(null))
+                .isInstanceOf(CommonBackendException.class)
+                .hasMessageContaining("Code must not be blank");
+
+        verifyNoInteractions(locationRepository);
+    }
+
+    @Test
+    void shouldThrowWhenLocationCodeIsBlank() {
+        assertThatThrownBy(() -> locationService.getByCode("   "))
+                .isInstanceOf(CommonBackendException.class)
+                .hasMessageContaining("Code must not be blank");
+
+        verifyNoInteractions(locationRepository);
     }
 
     @Test

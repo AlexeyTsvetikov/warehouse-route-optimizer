@@ -2,7 +2,6 @@ package ru.tsvetikov.warehouse.router.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,9 +28,9 @@ public class LocationService {
     private final LocationMapper locationMapper;
 
     @Transactional(readOnly = true)
-    @Cacheable(value = "locations", key = "#code")
     public Location getByCode(String code) {
-        return locationRepository.findByCode(code)
+        validateCode(code);
+        return locationRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new CommonBackendException(
                         String.format("Location with code '%s' not found", code), HttpStatus.NOT_FOUND));
     }
@@ -73,12 +72,10 @@ public class LocationService {
     public LocationResponse update(Long id, LocationRequest request) {
         Location location = findLocationOrThrow(id);
 
-        if (request.code() != null) {
+        if (request.code() != null && !request.code().equalsIgnoreCase(location.getCode())) {
             String formattedCode = formatCode(request.code());
-            if (!formattedCode.equals(location.getCode())) {
-                checkCodeUniqueness(formattedCode);
-                location.setCode(formattedCode);
-            }
+            checkCodeUniqueness(formattedCode);
+            location.setCode(formattedCode);
         }
 
         locationMapper.updateEntityFromDto(request, location);
@@ -134,10 +131,14 @@ public class LocationService {
                         String.format("Location with id: %s not found", id), HttpStatus.NOT_FOUND));
     }
 
-    private String formatCode(String code) {
+    private void validateCode(String code) {
         if (code == null || code.isBlank()) {
             throw new CommonBackendException("Code must not be blank", HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private String formatCode(String code) {
+        validateCode(code);
         return code.toUpperCase();
     }
 

@@ -59,7 +59,7 @@ public class CategoryService {
 
     @Transactional(readOnly = true)
     public Category getCategoryEntityByCategoryName(String categoryName) {
-        return categoryRepository.findByName(categoryName)
+        return categoryRepository.findByNameIgnoreCase(categoryName)
                 .orElseThrow(() -> new CommonBackendException(
                         String.format("Category with name '%s' not found", categoryName), HttpStatus.NOT_FOUND));
     }
@@ -68,8 +68,8 @@ public class CategoryService {
     public CategoryResponse update(Long id, CategoryRequest request) {
         Category category = findCategoryOrThrow(id);
 
-        String formattedName = formatName(request.name());
-        if (!category.getName().equalsIgnoreCase(formattedName)) {
+        if (request.name() != null && !request.name().equalsIgnoreCase(category.getName())) {
+            String formattedName = formatName(request.name());
             checkNameUniqueness(formattedName);
             category.setName(formattedName);
         }
@@ -104,7 +104,6 @@ public class CategoryService {
         categoryRepository.save(category);
         return categoryMapper.toResponseDto(category);
     }
-
 
     private Category findCategoryOrThrow(Long id) {
         return categoryRepository.findById(id)

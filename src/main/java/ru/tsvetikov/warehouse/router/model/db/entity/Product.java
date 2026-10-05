@@ -3,8 +3,7 @@ package ru.tsvetikov.warehouse.router.model.db.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -16,6 +15,9 @@ import java.util.List;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "products")
 public class Product {
     @Id
@@ -55,6 +57,7 @@ public class Product {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Builder.Default
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -64,6 +67,7 @@ public class Product {
     @JsonBackReference(value = "category-product")
     private Category category;
 
+    @Builder.Default
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
     @JsonManagedReference(value = "product-stock")
     private List<Stock> stocks = new ArrayList<>();

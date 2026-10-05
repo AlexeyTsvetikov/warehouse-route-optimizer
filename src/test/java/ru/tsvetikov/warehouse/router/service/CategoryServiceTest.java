@@ -198,25 +198,25 @@ class CategoryServiceTest {
                 .description("Description")
                 .build();
 
-        when(categoryRepository.findByName(categoryName)).thenReturn(Optional.of(entity));
+        when(categoryRepository.findByNameIgnoreCase(categoryName)).thenReturn(Optional.of(entity));
 
         Category result = categoryService.getCategoryEntityByCategoryName(categoryName);
 
         assertThat(result).isEqualTo(entity);
-        verify(categoryRepository).findByName(categoryName);
+        verify(categoryRepository).findByNameIgnoreCase(categoryName);
     }
 
     @Test
     void shouldThrowWhenCategoryNameNotFound() {
         String categoryName = "Unknown";
 
-        when(categoryRepository.findByName(categoryName)).thenReturn(Optional.empty());
+        when(categoryRepository.findByNameIgnoreCase(categoryName)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> categoryService.getCategoryEntityByCategoryName(categoryName))
                 .isInstanceOf(CommonBackendException.class)
                 .hasMessageContaining("Category with name 'Unknown' not found");
 
-        verify(categoryRepository).findByName(categoryName);
+        verify(categoryRepository).findByNameIgnoreCase(categoryName);
     }
 
     @Test
@@ -302,6 +302,30 @@ class CategoryServiceTest {
         assertThat(result).isEqualTo(response);
 
         verify(categoryRepository, never()).existsByNameIgnoreCase(any());
+        verify(categoryMapper).updateEntityFromDto(request, entity);
+    }
+
+    @Test
+    void shouldUpdateCategoryWithoutChangingNameWhenNameIsNull() {
+        Long id = 1L;
+        CategoryRequest request = new CategoryRequest(null, "Description");
+
+        Category entity = Category.builder()
+                .id(1L)
+                .name("Electronics")
+                .description("Description")
+                .build();
+        CategoryResponse response = new CategoryResponse(1L, "Electronics", "Description");
+
+        when(categoryRepository.findById(id)).thenReturn(Optional.of(entity));
+        when(categoryRepository.save(entity)).thenReturn(entity);
+        when(categoryMapper.toResponseDto(entity)).thenReturn(response);
+
+        CategoryResponse result = categoryService.update(id, request);
+
+        assertThat(result).isEqualTo(response);
+        verify(categoryRepository, never()).existsByNameIgnoreCase(any());
+        verify(categoryRepository).save(entity);
         verify(categoryMapper).updateEntityFromDto(request, entity);
     }
 
