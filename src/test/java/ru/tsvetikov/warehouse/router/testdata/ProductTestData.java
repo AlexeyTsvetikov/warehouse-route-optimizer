@@ -27,7 +27,6 @@ public final class ProductTestData {
                 .description("Оригинальный поршень в сборе")
                 .width(7.2).height(7.2).depth(5.0).weight(0.85)
                 .category(category());
-
     }
 
     public static ProductResponse response() {

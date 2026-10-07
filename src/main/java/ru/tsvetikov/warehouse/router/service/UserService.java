@@ -91,7 +91,7 @@ public class UserService {
     public UserResponse update(Long id, UserUpdateRequest request) {
         User user = findUserOrThrow(id);
 
-        if (request.username() != null && !request.username().equals(user.getUsername())) {
+        if (request.username() != null && !request.username().equalsIgnoreCase(user.getUsername())) {
             String formattedUsername = formatUsername(request.username());
             checkUsernameUniqueness(formattedUsername);
             user.setUsername(formattedUsername);

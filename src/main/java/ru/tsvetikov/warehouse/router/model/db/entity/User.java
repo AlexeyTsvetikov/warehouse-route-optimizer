@@ -1,8 +1,7 @@
 package ru.tsvetikov.warehouse.router.model.db.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -15,6 +14,9 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
 
@@ -35,16 +37,20 @@ public class User {
     @Column(name = "last_name", length = 100)
     private String lastName;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 20)
     private Role role = Role.PICKER;
 
+    @Builder.Default
     @Column(name = "last_known_x")
     private Double lastKnownX = 0.0;
 
+    @Builder.Default
     @Column(name = "last_known_y")
     private Double lastKnownY = 0.0;
 
+    @Builder.Default
     @ColumnDefault("true")
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
@@ -57,7 +63,7 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "assignedUser", fetch = FetchType.LAZY)
     private Set<WarehouseTask> warehouseTasks = new LinkedHashSet<>();
-
 }
