@@ -110,7 +110,7 @@ public class OrderService {
     public void delete(String orderNumber) {
         Order order = findOrderByNumberOrThrow(orderNumber);
 
-        validateOrderCanBeUpdated(order);
+        validateOrderCanBeDeleted(order);
 
         orderRepository.delete(order);
         log.info("Deleted order: {}", orderNumber);
@@ -243,16 +243,16 @@ public class OrderService {
     }
 
     private String generateUniqueOrderNumber() {
-        String orderNumber = generateOrderNumber();
         int attempts = 0;
-        while (orderRepository.existsByOrderNumber(orderNumber) && attempts < 3) {
-            orderNumber = generateOrderNumber();
+        while (attempts < 3) {
+            String candidate = generateOrderNumber();
+            if (!orderRepository.existsByOrderNumber(candidate)) {
+                return candidate;
+            }
             attempts++;
         }
-        if (orderRepository.existsByOrderNumber(orderNumber)) {
-            throw new CommonBackendException("Failed to generate unique order number after 3 attempts", HttpStatus.CONFLICT);
-        }
-        return orderNumber;
+        throw new CommonBackendException(
+                "Failed to generate unique order number after 3 attempts", HttpStatus.CONFLICT);
     }
 
     private Order findOrderByNumberOrThrow(String orderNumber) {
@@ -265,6 +265,14 @@ public class OrderService {
         if (order.getStatus() != OrderStatus.NEW) {
             throw new CommonBackendException(
                     String.format("Cannot update order with status: %s", order.getStatus()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private void validateOrderCanBeDeleted(Order order) {
+        if (order.getStatus() != OrderStatus.NEW) {
+            throw new CommonBackendException(
+                    String.format("Cannot delete order with status: %s", order.getStatus()),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 

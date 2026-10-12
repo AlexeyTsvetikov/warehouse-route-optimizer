@@ -451,6 +451,32 @@ class UserServiceTest {
     }
 
     @Test
+    void shouldThrowWhenUserNotFoundOnChangePasswordForCurrentUser() {
+        ChangePasswordRequest request = new ChangePasswordRequest("oldPassword", "newPassword");
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("username");
+
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+
+        when(userRepository.findByUsername("username")).thenReturn(Optional.empty());
+
+        try (MockedStatic<SecurityContextHolder> mocked = mockStatic(SecurityContextHolder.class)) {
+            mocked.when(SecurityContextHolder::getContext).thenReturn(securityContext);
+
+            assertThatThrownBy(() -> userService.changePasswordForCurrentUser(request))
+                    .isInstanceOf(CommonBackendException.class)
+                    .hasMessageContaining("User not found");
+
+            verify(userRepository).findByUsername("username");
+            verify(passwordEncoder, never()).matches(any(), anyString());
+            verify(passwordEncoder, never()).encode(anyString());
+            verify(userRepository, never()).save(any());
+        }
+    }
+
+    @Test
     void shouldChangePasswordByUserId() {
         Long id = 1L;
         ChangePasswordRequest request = new ChangePasswordRequest("oldPassword", "newPassword");

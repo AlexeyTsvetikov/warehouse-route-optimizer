@@ -1,8 +1,7 @@
 package ru.tsvetikov.warehouse.router.model.db.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import ru.tsvetikov.warehouse.router.model.enums.OrderStatus;
 import ru.tsvetikov.warehouse.router.model.enums.OrderType;
@@ -16,6 +15,9 @@ import java.util.Set;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "orders")
 public class Order {
 
@@ -41,10 +43,12 @@ public class Order {
 
     // Приоритет: 3 - низкий, 2 - средний, 1 - высокий
     @Column(name = "priority", nullable = false)
+    @Builder.Default
     private Integer priority = 2;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
+    @Builder.Default
     private OrderStatus status = OrderStatus.NEW;
 
     @CreationTimestamp
@@ -60,10 +64,12 @@ public class Order {
     private Instant completedAt;
 
     // Список товаров в заказе
+    @Builder.Default
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<OrderItem> orderItems = new ArrayList<>();
 
     // Задачи на сборку, связанные с этим заказом
+    @Builder.Default
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private Set<WarehouseTask> warehouseTasks = new LinkedHashSet<>();
 }

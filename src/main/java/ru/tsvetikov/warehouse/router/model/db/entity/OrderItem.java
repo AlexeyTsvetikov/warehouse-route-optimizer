@@ -1,14 +1,16 @@
 package ru.tsvetikov.warehouse.router.model.db.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "order_items")
 public class OrderItem {
 
@@ -31,6 +33,7 @@ public class OrderItem {
     private Integer quantity;
 
     // Сколько мы уже фактически собрали
+    @Builder.Default
     @Column(name = "collected_quantity", nullable = false)
     private Integer collectedQuantity = 0;
 

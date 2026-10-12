@@ -1,8 +1,7 @@
 package ru.tsvetikov.warehouse.router.model.db.entity;
-// ПОДТВЕРЖДАЮ
+
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskStatus;
@@ -12,6 +11,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "warehouse_tasks", indexes = {
         @Index(name = "idx_task_status", columnList = "status"),
         @Index(name = "idx_task_assignee", columnList = "user_id")
@@ -29,6 +31,7 @@ public class WarehouseTask {
     @Column(name = "type", nullable = false, length = 20)
     private WarehouseTaskType type;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private WarehouseTaskStatus status = WarehouseTaskStatus.CREATED;
@@ -47,12 +50,12 @@ public class WarehouseTask {
     @Column(name = "confirmed_quantity")
     private Integer confirmedQuantity;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_location_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_location_id")
     private Location sourceLocation;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "target_location_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "target_location_id")
     private Location targetLocation;
 
     // Ссылка на Заказ. Может быть null (если это просто перемещение внутри склада)
