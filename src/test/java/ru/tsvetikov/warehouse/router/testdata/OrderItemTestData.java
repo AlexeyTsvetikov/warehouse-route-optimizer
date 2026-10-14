@@ -29,4 +29,9 @@ public final class OrderItemTestData {
         return new OrderItemResponse(1L, "ORD-00001", "BRP-ENG-001",
                 "Поршень с шатуном", 10, 10, true);
     }
+
+    public static OrderItemResponse response(int quantity, int collectedQuantity) {
+        return new OrderItemResponse(1L, "ORD-00001", "BRP-ENG-001",
+                "Поршень с шатуном", quantity, collectedQuantity, true);
+    }
 }

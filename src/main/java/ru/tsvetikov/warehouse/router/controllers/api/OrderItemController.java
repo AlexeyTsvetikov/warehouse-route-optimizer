@@ -64,6 +64,6 @@ public class OrderItemController {
     @PatchMapping("/{id}/collected")
     public OrderItemResponse updateCollectedQuantity(@PathVariable String orderNumber, @PathVariable Long id,
                                                      @RequestParam @PositiveOrZero Integer quantity) {
-        return orderItemService.updateCollectedQuantity(orderNumber, id, quantity);
+        return orderItemService.setCollectedQuantity(orderNumber, id, quantity);
     }
 }

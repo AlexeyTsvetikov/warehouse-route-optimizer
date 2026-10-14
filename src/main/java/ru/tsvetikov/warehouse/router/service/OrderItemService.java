@@ -92,26 +92,26 @@ public class OrderItemService {
         validateOrderItemBelongsToOrder(item, orderNumber);
         validateOrderCanBeModified(item.getOrder());
 
-        boolean productChanged = request.productSku() != null && !request.productSku().equals(item.getProduct().getSku());
+        boolean productChanged = request.productSku() != null
+                                 && !request.productSku().equals(item.getProduct().getSku());
+        boolean quantityChanged = request.quantity() != null
+                                  && !request.quantity().equals(item.getQuantity());
 
         if (productChanged) {
             Product newProduct = findProductBySkuOrThrow(request.productSku());
             checkProductNotInOrder(item.getOrder(), newProduct);
-
-            if (order.getType() == OrderType.OUTBOUND) {
-                stockService.checkAvailability(request.productSku(), request.quantity());
-            }
             item.setProduct(newProduct);
         }
 
-        if (request.quantity() != null && !request.quantity().equals(item.getQuantity())) {
-            int newQty = request.quantity();
-
-            if (newQty <= 0) {
+        if (quantityChanged) {
+            if (request.quantity() <= 0) {
                 throw new CommonBackendException("Quantity must be positive", HttpStatus.BAD_REQUEST);
             }
+            item.setQuantity(request.quantity());
+        }
 
-            stockService.checkAvailability(item.getProduct().getSku(), newQty);
+        if (order.getType() == OrderType.OUTBOUND && (productChanged || quantityChanged)) {
+            stockService.checkAvailability(item.getProduct().getSku(), item.getQuantity());
         }
 
         orderItemMapper.updateEntityFromDto(request, item);
@@ -137,7 +137,7 @@ public class OrderItemService {
                         " and product " + product.getSku(), HttpStatus.NOT_FOUND));
 
         int newCollected = orderItem.getCollectedQuantity() + quantityToAdd;
-        updateCollectedQuantity(order.getOrderNumber(), orderItem.getId(), newCollected);
+        setCollectedQuantity(order.getOrderNumber(), orderItem.getId(), newCollected);
     }
 
     @Transactional(readOnly = true)
@@ -148,9 +148,13 @@ public class OrderItemService {
     }
 
     @Transactional
-    public OrderItemResponse updateCollectedQuantity(String orderNumber, Long id, Integer collectedQuantity) {
+    public OrderItemResponse setCollectedQuantity(String orderNumber, Long id, Integer collectedQuantity) {
         OrderItem item = findOrderItemOrThrow(id);
         validateOrderItemBelongsToOrder(item, orderNumber);
+
+        if (collectedQuantity == null) {
+            throw new CommonBackendException("Collected quantity must not be null", HttpStatus.BAD_REQUEST);
+        }
 
         if (collectedQuantity < 0) {
             throw new CommonBackendException("Collected quantity cannot be negative", HttpStatus.BAD_REQUEST);
@@ -207,7 +211,7 @@ public class OrderItemService {
         if (!expectedOrderNumber.equals(actualOrderNumber)) {
             throw new CommonBackendException(
                     String.format("Order item %d belongs to order '%s', not '%s'",
-                            orderItem.getId(), actualOrderNumber, expectedOrderNumber), HttpStatus.NOT_FOUND);
+                            orderItem.getId(), actualOrderNumber, expectedOrderNumber), HttpStatus.BAD_REQUEST);
         }
     }
 }
