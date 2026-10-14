@@ -52,4 +52,18 @@ public final class WarehouseTaskTestData {
                 10, "PICK-01", "DSPS-01", "ORD-00001",
                 CREATED_AT, UPDATED_AT, COMPLETED_AT);
     }
+
+    public static WarehouseTaskResponse response(String sourceCode, String targetCode) {
+        return new WarehouseTaskResponse(1L, "TASK-00001", WarehouseTaskType.PICKING,
+                WarehouseTaskStatus.COMPLETED, "username", "BRP-ENG-001", 10,
+                10, sourceCode, targetCode, "ORD-00001",
+                CREATED_AT, UPDATED_AT, COMPLETED_AT);
+    }
+
+    public static WarehouseTaskResponse response(Long id, String sourceCode, String targetCode) {
+        return new WarehouseTaskResponse(id, "TASK-0000" + id, WarehouseTaskType.PICKING,
+                WarehouseTaskStatus.CREATED, null, "BRP-ENG-001", 10,
+                null, sourceCode, targetCode, null,
+                CREATED_AT, UPDATED_AT, null);
+    }
 }
