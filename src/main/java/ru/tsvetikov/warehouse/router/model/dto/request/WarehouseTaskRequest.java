@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.Builder;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 
-@Builder
+@Builder(toBuilder = true)
 public record WarehouseTaskRequest(
         @NotNull
         WarehouseTaskType type,

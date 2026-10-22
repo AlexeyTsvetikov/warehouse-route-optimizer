@@ -199,8 +199,6 @@ public class WarehouseTaskService {
                 Order order = findOrderByNumberOrThrow(request.orderNumber());
                 task.setOrder(order);
             }
-        } else {
-            task.setOrder(null);
         }
 
         if (request.assignedUsername() != null && !request.assignedUsername().isBlank()) {
@@ -208,7 +206,7 @@ public class WarehouseTaskService {
             task.setAssignedUser(user);
         }
 
-        if (task.getAssignedUser() != null && task.getStatus() == WarehouseTaskStatus.CREATED) {
+        if (task.getAssignedUser() != null) {
             task.setStatus(WarehouseTaskStatus.ASSIGNED);
         }
 
@@ -428,6 +426,9 @@ public class WarehouseTaskService {
                 }
                 stockService.increaseStock(productSku, task.getTargetLocation().getCode(), confirmedQuantity);
             }
+            case null, default -> throw new CommonBackendException(
+                    String.format("Unsupported task type for stock update: %s", task.getType()),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 

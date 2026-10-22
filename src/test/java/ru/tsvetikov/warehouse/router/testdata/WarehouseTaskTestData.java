@@ -23,12 +23,6 @@ public final class WarehouseTaskTestData {
                 "ORD-00001", 10, false);
     }
 
-    public static WarehouseTaskRequest request(String sku, String orderNumber) {
-        return new WarehouseTaskRequest(WarehouseTaskType.PICKING, sku, 10,
-                "PICK-01", "DSPS-01", "username",
-                orderNumber, 10, false);
-    }
-
     public static WarehouseTask.WarehouseTaskBuilder entityBuilder() {
         return WarehouseTask.builder()
                 .taskNumber("TASK-00001")
@@ -51,19 +45,5 @@ public final class WarehouseTaskTestData {
                 WarehouseTaskStatus.COMPLETED, "username", "BRP-ENG-001", 10,
                 10, "PICK-01", "DSPS-01", "ORD-00001",
                 CREATED_AT, UPDATED_AT, COMPLETED_AT);
-    }
-
-    public static WarehouseTaskResponse response(String sourceCode, String targetCode) {
-        return new WarehouseTaskResponse(1L, "TASK-00001", WarehouseTaskType.PICKING,
-                WarehouseTaskStatus.COMPLETED, "username", "BRP-ENG-001", 10,
-                10, sourceCode, targetCode, "ORD-00001",
-                CREATED_AT, UPDATED_AT, COMPLETED_AT);
-    }
-
-    public static WarehouseTaskResponse response(Long id, String sourceCode, String targetCode) {
-        return new WarehouseTaskResponse(id, "TASK-0000" + id, WarehouseTaskType.PICKING,
-                WarehouseTaskStatus.CREATED, null, "BRP-ENG-001", 10,
-                null, sourceCode, targetCode, null,
-                CREATED_AT, UPDATED_AT, null);
     }
 }

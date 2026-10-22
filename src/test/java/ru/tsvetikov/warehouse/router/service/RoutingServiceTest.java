@@ -38,7 +38,8 @@ class RoutingServiceTest {
 
     @Test
     void shouldReturnSameDistanceForOneWarehouseTask() {
-        WarehouseTaskResponse response = WarehouseTaskTestData.response("RECV-01", "RECV-04");
+        WarehouseTaskResponse response = WarehouseTaskTestData.response().toBuilder()
+                .sourceLocationCode("RECV-01").targetLocationCode("RECV-04").build();
         Location location = LocationTestData.entityBuilder().id(1L).code("RECV-01").build();
 
         when(locationService.getByCode(anyString())).thenReturn(location);
@@ -53,8 +54,11 @@ class RoutingServiceTest {
 
     @Test
     void shouldReorderTasksWhenTspFindsShorterRoute() {
-        WarehouseTaskResponse task1 = WarehouseTaskTestData.response(1L, "A", null);
-        WarehouseTaskResponse task2 = WarehouseTaskTestData.response(2L, "B", null);
+        WarehouseTaskResponse task1 = WarehouseTaskTestData.response().toBuilder()
+                .id(1L).sourceLocationCode("A").targetLocationCode(null).build();
+        WarehouseTaskResponse task2 = WarehouseTaskTestData.response().toBuilder()
+                .id(2L).sourceLocationCode("B").targetLocationCode(null).build();
+
         Location locA = LocationTestData.entityBuilder().id(1L).code("A").coordX(100.0).coordY(100.0).build();
         Location locB = LocationTestData.entityBuilder().id(2L).code("B").coordX(10.0).coordY(10.0).build();
 
@@ -71,8 +75,11 @@ class RoutingServiceTest {
 
     @Test
     void shouldSkipTaskWithoutLocationInDistanceCalculation() {
-        WarehouseTaskResponse task1 = WarehouseTaskTestData.response(1L, "A", null);
-        WarehouseTaskResponse task2 = WarehouseTaskTestData.response(2L, null, null);
+        WarehouseTaskResponse task1 = WarehouseTaskTestData.response().toBuilder()
+                .id(1L).sourceLocationCode("A").targetLocationCode(null).build();
+        WarehouseTaskResponse task2 = WarehouseTaskTestData.response().toBuilder()
+                .id(2L).sourceLocationCode(null).targetLocationCode(null).build();
+
         Location locA = LocationTestData.entityBuilder().id(1L).code("A").coordX(100.0).coordY(100.0).build();
 
         when(locationService.getByCode("A")).thenReturn(locA);
@@ -87,8 +94,11 @@ class RoutingServiceTest {
 
     @Test
     void shouldReturnRouteWhenSourceLocationIsNull() {
-        WarehouseTaskResponse task1 = WarehouseTaskTestData.response(1L, null, "A");
-        WarehouseTaskResponse task2 = WarehouseTaskTestData.response(2L, null, "B");
+        WarehouseTaskResponse task1 = WarehouseTaskTestData.response().toBuilder()
+                .id(1L).sourceLocationCode(null).targetLocationCode("A").build();
+        WarehouseTaskResponse task2 = WarehouseTaskTestData.response().toBuilder()
+                .id(2L).sourceLocationCode(null).targetLocationCode("B").build();
+
         Location locA = LocationTestData.entityBuilder().id(1L).code("A").coordX(100.0).coordY(100.0).build();
         Location locB = LocationTestData.entityBuilder().id(2L).code("B").coordX(10.0).coordY(10.0).build();
 

@@ -1,10 +1,12 @@
 package ru.tsvetikov.warehouse.router.model.dto.response;
 
+import lombok.Builder;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskStatus;
 import ru.tsvetikov.warehouse.router.model.enums.WarehouseTaskType;
 
 import java.time.LocalDateTime;
 
+@Builder(toBuilder = true)
 public record WarehouseTaskResponse(
         Long id,
         String taskNumber,
